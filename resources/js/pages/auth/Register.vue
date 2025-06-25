@@ -12,6 +12,8 @@ const form = useForm({
     name: '',
     email: '',
     password: '',
+    phone: '',
+    role: '',
     password_confirmation: '',
 });
 
@@ -38,6 +40,31 @@ const submit = () => {
                     <Label for="email">Email address</Label>
                     <Input id="email" type="email" required :tabindex="2" autocomplete="email" v-model="form.email" placeholder="email@example.com" />
                     <InputError :message="form.errors.email" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="phone">Phone</Label>
+                    <Input
+                        id="phone"
+                        type="text"
+                        required
+                        autofocus
+                        :tabindex="1"
+                        autocomplete="phone"
+                        v-model="form.phone"
+                        placeholder="Full phone"
+                    />
+                    <InputError :message="form.errors.phone" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="role">Role</Label>
+                    <select id="role" v-model="form.role" required :tabindex="3" class="input">
+                        <option value="" disabled>Select role</option>
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <InputError :message="form.errors.role" />
                 </div>
 
                 <div class="grid gap-2">
