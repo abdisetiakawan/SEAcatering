@@ -52,4 +52,9 @@ class MenuItem extends Model
     {
         return $this->hasMany(Review::class);
     }
+
+    public function inventory()
+    {
+        return $this->hasOne(Inventory::class);
+    }
 }
