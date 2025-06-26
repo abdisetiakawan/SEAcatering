@@ -113,18 +113,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Plus, RefreshCw, Search, Utensils } from 'lucide-vue-next';
-import { reactive, ref } from 'vue';
+import { reactive, ref, watch } from 'vue';
 
 interface MealPlan {
     id: number;
     name: string;
-    type: string;
+    plan_type: string;
     description: string;
-    price: number;
-    duration_days: number;
+    price_per_meal: number;
     is_active: boolean;
     image?: string;
-    dietary_tags?: string[];
+    features?: string[];
     menu_items_count?: number;
     subscriptions_count?: number;
     orders_count?: number;
@@ -199,4 +198,17 @@ const resetFilters = () => {
     filters.status = '';
     router.get(route('admin.meal-plans.index'));
 };
+watch(
+    () => filters.plan_type,
+    () => {
+        handleFilter();
+    },
+);
+
+watch(
+    () => filters.status,
+    () => {
+        handleFilter();
+    },
+);
 </script>
