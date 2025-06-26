@@ -13,12 +13,13 @@ const user = page.props.auth?.user;
             <div class="flex items-center gap-3">
                 <span class="text-sm text-gray-600">Halo, {{ user.name }}</span>
                 <Link
-                    :href="route('dashboard')"
+                    :href="user.role === 'admin' ? route('admin.dashboard') : route('dashboard')"
                     class="inline-flex items-center rounded-sm border border-green-600 px-4 py-2 text-sm font-medium text-green-600 transition-colors hover:bg-green-50"
                 >
                     <LayoutDashboard class="mr-2 h-4 w-4" />
                     Dashboard
                 </Link>
+
                 <Link
                     :href="route('logout')"
                     method="post"
