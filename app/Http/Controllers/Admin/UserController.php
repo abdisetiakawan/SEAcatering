@@ -36,9 +36,10 @@ class UserController extends Controller
         }
 
         // Filter by admin status
-        if ($request->filled('is_admin')) {
-            $query->where('is_admin', $request->is_admin === 'true');
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
         }
+
 
         // Filter by email verification
         if ($request->filled('email_verified')) {
@@ -56,14 +57,14 @@ class UserController extends Controller
             'active_subscribers' => User::whereHas('subscriptions', function ($q) {
                 $q->where('status', 'active');
             })->count(),
-            'admin_users' => User::where('is_admin', true)->count(),
+            'admin_users' => User::where('role', 'admin')->count(),
             'unverified_users' => User::whereNull('email_verified_at')->count(),
             'new_users_today' => User::whereDate('created_at', today())->count(),
         ];
 
         return Inertia::render('Admin/UserManagement', [
             'users' => $users,
-            'filters' => $request->only(['search', 'subscription_status', 'is_admin', 'email_verified']),
+            'filters' => $request->only(['search', 'subscription_status', 'role', 'email_verified']),
             'stats' => $stats
         ]);
     }
@@ -97,9 +98,10 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
-            'is_admin' => 'boolean',
-            'email_verified_at' => 'nullable|date'
+            'role' => 'required|in:admin,user',
+            'email_verified_at' => 'nullable|date',
         ]);
+
 
         $validated['password'] = Hash::make($validated['password']);
 
@@ -120,8 +122,9 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
             'password' => 'nullable|string|min:8|confirmed',
-            'is_admin' => 'boolean'
+            'role' => 'required|in:admin,user',
         ]);
+
 
         if ($request->filled('password')) {
             $validated['password'] = Hash::make($validated['password']);
@@ -151,8 +154,9 @@ class UserController extends Controller
     public function toggleAdmin(User $user)
     {
         $user->update([
-            'is_admin' => !$user->is_admin
+            'role' => $user->role === 'admin' ? 'user' : 'admin',
         ]);
+
 
         return redirect()->back()
             ->with('success', 'User admin status updated successfully.');
@@ -184,12 +188,10 @@ class UserController extends Controller
                 $message = 'Users verified successfully.';
                 break;
             case 'make_admin':
-                $users->update(['is_admin' => true]);
-                $message = 'Users made admin successfully.';
+                $users->update(['role' => 'admin']);
                 break;
             case 'remove_admin':
-                $users->update(['is_admin' => false]);
-                $message = 'Admin privileges removed successfully.';
+                $users->update(['role' => 'user']);
                 break;
             case 'delete':
                 $users->delete();
