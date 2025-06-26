@@ -32,7 +32,7 @@ class MenuController extends Controller
             $query->where('is_available', $isAvailable);
         }
 
-        $menuItems = $query->orderBy('created_at', 'desc')->paginate(12);
+        $menuItems = $query->orderBy('created_at', 'desc')->paginate(6);
 
         return Inertia::render('Admin/MenuManagement', [
             'menuItems' => $menuItems,

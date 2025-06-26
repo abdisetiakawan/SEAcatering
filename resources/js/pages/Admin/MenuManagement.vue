@@ -118,6 +118,7 @@
 import ConfirmationModal from '@/components/Admin/ConfirmationModal.vue';
 import MenuFormModal from '@/components/Admin/MenuFormModal.vue';
 import MenuItemCard from '@/components/Admin/MenuItemCard.vue';
+import Pagination from '@/components/Admin/Pagination.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
