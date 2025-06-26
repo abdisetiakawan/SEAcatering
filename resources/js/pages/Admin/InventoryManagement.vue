@@ -64,18 +64,29 @@
                                 <Search class="absolute top-3 left-3 h-4 w-4 text-gray-400" />
                                 <Input v-model="filters.search" placeholder="Cari inventory..." class="pl-10" @input="handleSearch" />
                             </div>
-                            <Select v-model="filters.stock_status" @change="handleFilter">
-                                <option value="">Semua Status</option>
-                                <option v-for="(label, value) in stockStatusOptions" :key="value" :value="value">
-                                    {{ label }}
-                                </option>
+                            <Select :model-value="filters.stock_status" @update:model-value="handleFilter">
+                                <SelectTrigger class="w-[200px]">
+                                    <SelectValue placeholder="Pilih Status Stok" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem v-for="(label, value) in stockStatusOptions" :key="value" :value="value">
+                                        {{ label }}
+                                    </SelectItem>
+                                </SelectContent>
                             </Select>
-                            <Select v-model="filters.supplier" @change="handleFilter">
-                                <option value="">Semua Supplier</option>
-                                <option v-for="supplier in suppliers" :key="supplier" :value="supplier">
-                                    {{ supplier }}
-                                </option>
+
+                            <Select v-model="filters.supplier" @update:modelValue="handleFilter">
+                                <SelectTrigger class="w-full">
+                                    <SelectValue placeholder="Semua Supplier" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Supplier</SelectItem>
+                                    <SelectItem v-for="supplier in suppliers" :key="supplier" :value="supplier">
+                                        {{ supplier }}
+                                    </SelectItem>
+                                </SelectContent>
                             </Select>
+
                             <Button variant="outline" @click="resetFilters">
                                 <RefreshCw class="mr-2 h-4 w-4" />
                                 Reset Filter
@@ -206,7 +217,7 @@ import StockUpdateModal from '@/components/Admin/StockUpdateModal.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { AlertTriangle, Edit, Package, Plus, RefreshCw, Search, Trash } from 'lucide-vue-next';
@@ -289,12 +300,12 @@ const toggleSelectAll = (event: Event) => {
     }
 };
 
-const getStatusVariant = (status: string) => {
-    const variants: Record<string, string> = {
-        in_stock: 'success',
-        low_stock: 'warning',
+const getStatusVariant = (status: string): 'default' | 'destructive' | 'outline' | 'secondary' => {
+    const variants: Record<string, 'default' | 'destructive' | 'outline' | 'secondary'> = {
+        in_stock: 'default',
+        low_stock: 'outline',
         out_of_stock: 'destructive',
-        expiring_soon: 'warning',
+        expiring_soon: 'secondary',
     };
     return variants[status] || 'default';
 };

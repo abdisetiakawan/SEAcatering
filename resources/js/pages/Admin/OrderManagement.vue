@@ -52,12 +52,17 @@
                                 <Search class="absolute top-3 left-3 h-4 w-4 text-gray-400" />
                                 <Input v-model="filters.search" placeholder="Cari order..." class="pl-10" @input="handleSearch" />
                             </div>
-                            <Select v-model="filters.status" @change="handleFilter">
-                                <option value="">Semua Status</option>
-                                <option v-for="(label, value) in statusOptions" :key="value" :value="value">
-                                    {{ label }}
-                                </option>
+                            <Select :model-value="filters.status" @update:model-value="handleFilter">
+                                <SelectTrigger class="w-[200px]">
+                                    <SelectValue placeholder="Pilih Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem v-for="(label, value) in statusOptions" :key="value" :value="value">
+                                        {{ label }}
+                                    </SelectItem>
+                                </SelectContent>
                             </Select>
+
                             <Input v-model="filters.delivery_date" type="date" @change="handleFilter" />
                             <Input v-model="filters.date_from" type="date" placeholder="Dari tanggal" @change="handleFilter" />
                             <Button variant="outline" @click="resetFilters">
@@ -142,11 +147,12 @@ import Pagination from '@/components/Admin/Pagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Eye, RefreshCw, Search } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
+type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivering' | 'delivered' | 'cancelled';
 
 interface Order {
     id: number;
@@ -154,7 +160,8 @@ interface Order {
     delivery_date: string;
     delivery_time_slot: string;
     total_amount: number;
-    status: string;
+    status: OrderStatus;
+    created_at: string;
     subscription: {
         user: {
             name: string;
@@ -175,7 +182,7 @@ const props = defineProps<{
 
 // State
 const showStatusModal = ref(false);
-const selectedOrder = ref<Order | null>(null);
+const selectedOrder = ref<Order | undefined>(undefined);
 
 // Methods
 const openStatusModal = (order: Order) => {
@@ -185,18 +192,15 @@ const openStatusModal = (order: Order) => {
 
 const handleStatusUpdated = () => {
     showStatusModal.value = false;
-    selectedOrder.value = null;
+    selectedOrder.value = undefined;
     router.reload();
 };
 
-const getStatusVariant = (status: string) => {
-    const variants: Record<string, string> = {
+const getStatusVariant = (status: string): 'default' | 'destructive' | 'outline' | 'secondary' => {
+    const variants: Record<string, 'default' | 'destructive' | 'outline' | 'secondary'> = {
         pending: 'secondary',
         confirmed: 'default',
-        preparing: 'warning',
-        ready: 'success',
-        out_for_delivery: 'info',
-        delivered: 'success',
+        delivered: 'default',
         cancelled: 'destructive',
     };
     return variants[status] || 'default';

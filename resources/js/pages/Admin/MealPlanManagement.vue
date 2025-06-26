@@ -32,15 +32,24 @@
                                 <Input v-model="filters.search" placeholder="Cari meal plan..." class="pl-10" @input="handleSearch" />
                             </div>
                             <Select v-model="filters.plan_type" @change="handleFilter">
-                                <option value="">Semua Tipe</option>
-                                <option v-for="(label, value) in planTypes" :key="value" :value="value">
-                                    {{ label }}
-                                </option>
+                                <SelectTrigger class="w-full">
+                                    <SelectValue placeholder="Semua Tipe" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem v-for="(label, value) in planTypes" :key="value" :value="value">
+                                        {{ label }}
+                                    </SelectItem>
+                                </SelectContent>
                             </Select>
                             <Select v-model="filters.status" @change="handleFilter">
-                                <option value="">Semua Status</option>
-                                <option value="active">Aktif</option>
-                                <option value="inactive">Tidak Aktif</option>
+                                <SelectTrigger class="w-full">
+                                    <SelectValue placeholder="Semua Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Status</SelectItem>
+                                    <SelectItem value="active">Aktif</SelectItem>
+                                    <SelectItem value="inactive">Tidak Aktif</SelectItem>
+                                </SelectContent>
                             </Select>
                             <Button variant="outline" @click="resetFilters">
                                 <RefreshCw class="mr-2 h-4 w-4" />
@@ -55,7 +64,7 @@
                     <MealPlanCard
                         v-for="plan in mealPlans.data"
                         :key="plan.id"
-                        :plan="plan"
+                        :mealPlan="plan"
                         @edit="editPlan"
                         @delete="confirmDelete"
                         @toggle-status="toggleStatus"
@@ -100,7 +109,7 @@ import MealPlanCard from '@/components/Admin/MealPlanCard.vue';
 import Pagination from '@/components/Admin/Pagination.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Plus, RefreshCw, Search, Utensils } from 'lucide-vue-next';
@@ -109,16 +118,18 @@ import { reactive, ref } from 'vue';
 interface MealPlan {
     id: number;
     name: string;
+    type: string;
     description: string;
-    price_per_meal: number;
-    target_calories: number;
-    plan_type: string;
+    price: number;
+    duration_days: number;
     is_active: boolean;
-    image: string;
-    features: string[];
-    menu_items_count: number;
-    subscriptions_count: number;
+    image?: string;
+    dietary_tags?: string[];
+    menu_items_count?: number;
+    subscriptions_count?: number;
+    orders_count?: number;
     created_at: string;
+    updated_at: string;
 }
 
 interface MealPlansResponse {
