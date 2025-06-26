@@ -222,14 +222,13 @@ const priorityText = computed((): string => {
     }
 });
 
-const statusVariant = computed((): string => {
+const statusVariant = computed((): 'default' | 'destructive' | 'outline' | 'secondary' | null | undefined => {
     switch (props.item.stock_status) {
         case 'critical':
             return 'destructive';
         case 'low':
-            return 'warning';
         case 'expiring':
-            return 'warning';
+            return 'outline';
         default:
             return 'default';
     }
