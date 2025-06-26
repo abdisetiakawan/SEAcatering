@@ -14,36 +14,20 @@
                     </Link>
 
                     <!-- Desktop Navigation -->
-                    <div class="hidden md:ml-10 md:flex md:space-x-8">
-                        <NavLink :href="route('admin.dashboard')" :active="route().current('admin.dashboard')">
-                            <LayoutDashboard class="mr-2 h-4 w-4" />
-                            Dashboard
-                        </NavLink>
-
-                        <!-- <NavLink :href="route('admin.menu.index')" :active="route().current('admin.menu.*')">
-                            <Utensils class="mr-2 h-4 w-4" />
-                            Menu Management
-                        </NavLink>
-
-                        <NavLink :href="route('admin.plans.index')" :active="route().current('admin.plans.*')">
-                            <Package class="mr-2 h-4 w-4" />
-                            Meal Plans
-                        </NavLink>
-
-                        <NavLink :href="route('admin.users.index')" :active="route().current('admin.users.*')">
-                            <Users class="mr-2 h-4 w-4" />
-                            Users
-                        </NavLink>
-
-                        <NavLink :href="route('admin.orders.index')" :active="route().current('admin.orders.*')">
-                            <ShoppingCart class="mr-2 h-4 w-4" />
-                            Orders
-                        </NavLink>
-
-                        <NavLink :href="route('admin.inventory.index')" :active="route().current('admin.inventory.*')">
-                            <Package2 class="mr-2 h-4 w-4" />
-                            Inventory
-                        </NavLink> -->
+                    <div class="col-end-1 hidden items-center md:ml-10 md:flex md:space-x-6">
+                        <Link
+                            v-for="item in adminNavItems"
+                            :key="item.href"
+                            :href="route(item.href)"
+                            :class="[
+                                'relative px-3 py-2 text-sm font-medium transition-colors duration-300',
+                                route().current(item.active)
+                                    ? 'border-b-2 border-green-600 text-green-600'
+                                    : 'text-gray-600 hover:border-b-2 hover:border-green-300 hover:text-green-600',
+                            ]"
+                        >
+                            {{ item.label }}
+                        </Link>
                     </div>
                 </div>
 
@@ -164,6 +148,15 @@ import { onMounted, onUnmounted, ref } from 'vue';
 const showUserMenu = ref(false);
 const showMobileMenu = ref(false);
 const userMenuRef = ref<HTMLElement>();
+
+const adminNavItems = [
+    { label: 'Dashboard', href: 'admin.dashboard', active: 'admin.dashboard' },
+    { label: 'Menu Management', href: 'admin.menu.index', active: 'admin.menu.*' },
+    { label: 'Meal Plans', href: 'admin.plans.index', active: 'admin.plans.*' },
+    { label: 'Users', href: 'admin.users.index', active: 'admin.users.*' },
+    { label: 'Orders', href: 'admin.orders.index', active: 'admin.orders.*' },
+    { label: 'Inventory', href: 'admin.inventory.index', active: 'admin.inventory.*' },
+];
 
 // Methods
 const toggleUserMenu = () => {
