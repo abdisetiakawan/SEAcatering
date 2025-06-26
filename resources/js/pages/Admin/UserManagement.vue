@@ -57,10 +57,10 @@
                                 <option value="active">Active Subscriber</option>
                                 <option value="inactive">No Active Subscription</option>
                             </Select>
-                            <Select v-model="filters.is_admin" @change="handleFilter">
+                            <Select v-model="filters.role" @change="handleFilter">
                                 <option value="">Semua Role</option>
-                                <option value="true">Admin</option>
-                                <option value="false">Regular User</option>
+                                <option value="admin">Admin</option>
+                                <option value="user">Regular User</option>
                             </Select>
                             <Button variant="outline" @click="resetFilters">
                                 <RefreshCw class="mr-2 h-4 w-4" />
@@ -101,7 +101,7 @@
                                             <div class="ml-4">
                                                 <div class="flex items-center text-sm font-medium text-gray-900">
                                                     {{ user.name }}
-                                                    <Shield v-if="user.is_admin" class="ml-2 h-4 w-4 text-purple-600" />
+                                                    <Shield v-if="user.role === 'admin'" class="ml-2 h-4 w-4 text-purple-600" />
                                                 </div>
                                                 <div class="text-sm text-gray-500">{{ user.email }}</div>
                                                 <div v-if="user.phone" class="text-sm text-gray-500">{{ user.phone }}</div>
@@ -110,15 +110,15 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex flex-col space-y-1">
-                                            <Badge v-if="user.email_verified_at" variant="success"> Verified </Badge>
-                                            <Badge v-else variant="warning"> Unverified </Badge>
-                                            <Badge v-if="user.is_admin" variant="secondary"> Admin </Badge>
+                                            <Badge v-if="user.email_verified_at" variant="default"> Verified </Badge>
+                                            <Badge v-else variant="outline"> Unverified </Badge>
+                                            <Badge v-if="user.role === 'admin'" variant="secondary"> Admin </Badge>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                                         <div v-if="user.subscriptions.length > 0">
                                             <div v-for="subscription in user.subscriptions" :key="subscription.id" class="mb-1">
-                                                <Badge :variant="subscription.status === 'active' ? 'success' : 'secondary'">
+                                                <Badge :variant="subscription.status === 'active' ? 'default' : 'secondary'">
                                                     {{ subscription.meal_plan.name }}
                                                 </Badge>
                                             </div>
@@ -136,7 +136,7 @@
                                             <Button size="sm" variant="outline" @click="editUser(user)">
                                                 <Edit class="h-4 w-4" />
                                             </Button>
-                                            <Button size="sm" variant="outline" @click="toggleAdmin(user)">
+                                            <Button size="sm" variant="outline" @click="toggleRole(user)">
                                                 <Shield class="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -193,14 +193,28 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { Edit, Eye, Plus, RefreshCw, Search, Shield, User } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
 
+type UserRole = 'user' | 'customer' | 'chef' | 'driver' | 'admin';
+type Gender = 'male' | 'female' | 'other' | '';
+type VehicleType = 'motorcycle' | 'car' | 'van' | '';
 interface UserData {
     id: number;
     name: string;
     email: string;
-    phone: string;
-    is_admin: boolean;
-    email_verified_at: string | null;
+    phone?: string;
+    role: UserRole;
+    email_verified_at?: string | null;
+    is_active: boolean;
+    date_of_birth?: string | null;
+    gender?: Gender;
+    address?: string | null;
+    admin_notes?: string | null;
     created_at: string;
+    updated_at?: string;
+    // Driver specific fields
+    license_number?: string | null;
+    vehicle_type?: VehicleType;
+    vehicle_plate?: string | null;
+    is_available?: boolean;
     subscriptions: Array<{
         id: number;
         status: string;
@@ -247,8 +261,8 @@ const handleUserSaved = () => {
     router.reload();
 };
 
-const toggleAdmin = (user: UserData) => {
-    router.patch(route('admin.users.toggle-admin', user.id));
+const toggleRole = (user: UserData) => {
+    router.patch(route('admin.users.toggle-role', user.id));
 };
 
 const toggleSelectAll = (event: Event) => {
@@ -312,15 +326,17 @@ const handleFilter = () => {
         replace: true,
     });
 };
+
 interface Filters {
     search: string;
     subscription_status: string;
-    is_admin: string;
+    role: string;
 }
+
 const filters = reactive<Filters>({
     search: props.filters.search || '',
     subscription_status: props.filters.subscription_status || '',
-    is_admin: props.filters.is_admin || '',
+    role: props.filters.role || '',
 });
 
 const resetFilters = () => {

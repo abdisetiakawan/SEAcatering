@@ -78,6 +78,7 @@
                         :item="item"
                         @edit="(item: any) => openEditModal(item)"
                         @delete="(item: any) => confirmDelete(item)"
+                        @toggle-status="(item: any) => toggleItemStatus(item)"
                     />
                 </div>
 
@@ -130,6 +131,19 @@ defineProps({
         required: true,
     },
 });
+
+const toggleItemStatus = (item: MenuItem) => {
+    router.patch(
+        route('admin.menu.toggle-status', item.id),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                router.reload({ only: ['menuItems'] });
+            },
+        },
+    );
+};
 
 interface MenuItem {
     id: number;
