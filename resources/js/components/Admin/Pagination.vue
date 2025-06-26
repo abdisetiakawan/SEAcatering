@@ -23,11 +23,11 @@
             <div>
                 <p class="text-sm text-gray-700">
                     Showing
-                    <span class="font-medium">{{ meta.from }}</span>
+                    <span class="font-medium">{{ meta?.from }}</span>
                     to
-                    <span class="font-medium">{{ meta.to }}</span>
+                    <span class="font-medium">{{ meta?.to }}</span>
                     of
-                    <span class="font-medium">{{ meta.total }}</span>
+                    <span class="font-medium">{{ meta?.total }}</span>
                     results
                 </p>
             </div>
@@ -69,7 +69,7 @@ type PaginationLink = {
 
 defineProps<{
     links: PaginationLink[];
-    meta: {
+    meta?: {
         from: number;
         to: number;
         total: number;
