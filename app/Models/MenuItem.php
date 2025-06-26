@@ -57,4 +57,9 @@ class MenuItem extends Model
     {
         return $this->hasOne(Inventory::class);
     }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 }
