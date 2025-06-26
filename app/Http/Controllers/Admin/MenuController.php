@@ -42,29 +42,20 @@ class MenuController extends Controller
 
     public function store(Request $request)
     {
-        Log::info('Request data', $request->all());
-
-        try {
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'description' => 'required|string',
-                'price' => 'required|numeric|min:0',
-                'category' => 'required|string|in:diet,protein,royal,vegetarian,seafood',
-                'calories' => 'required|integer|min:0',
-                'protein' => 'required|numeric|min:0',
-                'carbs' => 'required|numeric|min:0',
-                'fat' => 'required|numeric|min:0',
-                'ingredients' => 'nullable|string',
-                'allergens' => 'nullable',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-                'is_available' => 'in:true,false',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Validation failed', $e->errors());
-            return back()->withErrors($e->errors())->withInput();
-        }
-
-        Log::info('Validated data', $validated);
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'price' => 'required|numeric|min:0',
+            'category' => 'required|string|in:diet,protein,royal,vegetarian,seafood',
+            'calories' => 'required|integer|min:0',
+            'protein' => 'required|numeric|min:0',
+            'carbs' => 'required|numeric|min:0',
+            'fat' => 'required|numeric|min:0',
+            'ingredients' => 'nullable|string',
+            'allergens' => 'nullable',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'is_available' => 'in:true,false',
+        ]);
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('menu-items', 'public');
@@ -80,7 +71,7 @@ class MenuController extends Controller
     }
 
 
-    public function update(Request $request, MenuItem $menuItem)
+    public function update(Request $request, MenuItem $menu)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -94,13 +85,12 @@ class MenuController extends Controller
             'ingredients' => 'nullable|string',
             'allergens' => 'nullable|json',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'is_available' => 'boolean',
+            'is_available' => 'in:true,false',
         ]);
-
         if ($request->hasFile('image')) {
             // Delete old image
-            if ($menuItem->image) {
-                Storage::disk('public')->delete($menuItem->image);
+            if ($menu->image) {
+                Storage::disk('public')->delete($menu->image);
             }
             $validated['image'] = $request->file('image')->store('menu-items', 'public');
         }
@@ -109,19 +99,19 @@ class MenuController extends Controller
             $validated['allergens'] = json_decode($request->allergens, true);
         }
 
-        $menuItem->update($validated);
+        $menu->update($validated);
 
         return redirect()->route('admin.menu.index')
             ->with('success', 'Menu item updated successfully.');
     }
 
-    public function destroy(MenuItem $menuItem)
+    public function destroy(MenuItem $menu)
     {
-        if ($menuItem->image) {
-            Storage::disk('public')->delete($menuItem->image);
+        if ($menu->image) {
+            Storage::disk('public')->delete($menu->image);
         }
 
-        $menuItem->delete();
+        $menu->delete();
 
         return redirect()->route('admin.menu.index')
             ->with('success', 'Menu item deleted successfully.');
