@@ -184,7 +184,7 @@ const props = defineProps<{
     isEditing: boolean;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
     close: [];
     saved: [];
 }>();

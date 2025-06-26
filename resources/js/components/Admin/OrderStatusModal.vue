@@ -15,7 +15,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <h3 class="font-medium text-gray-900">Order #{{ order.id }}</h3>
-                        <p class="text-sm text-gray-600">{{ order.user?.name }}</p>
+                        <p class="text-sm text-gray-600">{{ order.subscription.user.name }}</p>
                         <p class="text-sm text-gray-600">{{ formatDate(order.created_at) }}</p>
                     </div>
                     <div class="text-right">
@@ -144,10 +144,21 @@ interface User {
 
 interface Order {
     id: number;
-    status: OrderStatus;
+    order_number: string;
+    delivery_date: string;
+    delivery_time_slot: string;
     total_amount: number;
+    status: OrderStatus;
     created_at: string;
-    user?: User;
+    subscription: {
+        user: {
+            name: string;
+            email: string;
+        };
+        meal_plan: {
+            name: string;
+        };
+    };
 }
 
 interface StatusOption {
