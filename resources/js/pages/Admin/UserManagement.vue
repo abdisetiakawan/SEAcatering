@@ -52,16 +52,27 @@
                                 <Search class="absolute top-3 left-3 h-4 w-4 text-gray-400" />
                                 <Input v-model="filters.search" placeholder="Cari user..." class="pl-10" @input="handleSearch" />
                             </div>
-                            <Select v-model="filters.subscription_status" @change="handleFilter">
-                                <option value="">Semua Subscription</option>
-                                <option value="active">Active Subscriber</option>
-                                <option value="inactive">No Active Subscription</option>
+                            <Select v-model="filters.subscription_status" @update:modelValue="handleFilter">
+                                <SelectTrigger class="w-[220px]">
+                                    <SelectValue placeholder="Subscription Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Subscription</SelectItem>
+                                    <SelectItem value="active">Active Subscriber</SelectItem>
+                                    <SelectItem value="inactive">No Active Subscription</SelectItem>
+                                </SelectContent>
                             </Select>
-                            <Select v-model="filters.role" @change="handleFilter">
-                                <option value="">Semua Role</option>
-                                <option value="admin">Admin</option>
-                                <option value="user">Regular User</option>
+                            <Select v-model="filters.role" @update:modelValue="handleFilter">
+                                <SelectTrigger class="w-[220px]">
+                                    <SelectValue placeholder="Role Pengguna" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Role</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="user">Regular User</SelectItem>
+                                </SelectContent>
                             </Select>
+
                             <Button variant="outline" @click="resetFilters">
                                 <RefreshCw class="mr-2 h-4 w-4" />
                                 Reset Filter
@@ -187,7 +198,7 @@ import UserFormModal from '@/components/Admin/UserFormModal.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Edit, Eye, Plus, RefreshCw, Search, Shield, User } from 'lucide-vue-next';
