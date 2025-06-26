@@ -6,7 +6,7 @@
                 <div class="relative">
                     <img
                         v-if="item.menu_item.image"
-                        :src="item.menu_item.image"
+                        :src="item.menu_item.image.startsWith('http') ? item.menu_item.image : '/storage/' + item.menu_item.image"
                         :alt="item.menu_item.name"
                         class="h-16 w-16 rounded-lg object-cover"
                     />

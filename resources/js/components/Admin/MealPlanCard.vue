@@ -2,7 +2,12 @@
     <div class="overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-200 hover:shadow-lg">
         <!-- Header Image -->
         <div class="relative h-48 bg-gray-200">
-            <img v-if="mealPlan.image" :src="mealPlan.image" :alt="mealPlan.name" class="h-full w-full object-cover" />
+            <img
+                v-if="mealPlan.image"
+                :src="mealPlan.image.startsWith('http') ? mealPlan.image : '/storage/' + mealPlan.image"
+                :alt="mealPlan.name"
+                class="h-full w-full object-cover"
+            />
             <div v-else class="flex h-full items-center justify-center">
                 <svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -26,7 +31,7 @@
 
             <!-- Price Badge -->
             <div class="absolute top-3 left-3">
-                <span class="rounded-full bg-blue-600 px-2 py-1 text-xs font-medium text-white"> Rp {{ formatPrice(mealPlan.price) }} </span>
+                <span class="rounded-full bg-blue-600 px-2 py-1 text-xs font-medium text-white"> Rp {{ formatPrice(mealPlan.price_per_meal) }} </span>
             </div>
         </div>
 
@@ -36,9 +41,8 @@
             <div class="mb-2">
                 <h3 class="mb-1 text-lg font-semibold text-gray-900">{{ mealPlan.name }}</h3>
                 <div class="flex items-center space-x-2">
-                    <span class="text-sm text-gray-600 capitalize">{{ mealPlan.type }}</span>
+                    <span class="text-sm text-gray-600 capitalize">{{ mealPlan.plan_type }}</span>
                     <span class="text-gray-300">•</span>
-                    <span class="text-sm text-gray-600">{{ mealPlan.duration_days }} days</span>
                 </div>
             </div>
 
@@ -71,17 +75,13 @@
             </div>
 
             <!-- Dietary Tags -->
-            <div v-if="mealPlan.dietary_tags && mealPlan.dietary_tags.length > 0" class="mb-4">
+            <div v-if="mealPlan.features && mealPlan.features.length > 0" class="mb-4">
                 <div class="flex flex-wrap gap-1">
-                    <span
-                        v-for="tag in mealPlan.dietary_tags.slice(0, 3)"
-                        :key="tag"
-                        class="rounded-full bg-green-100 px-2 py-1 text-xs text-green-800"
-                    >
+                    <span v-for="tag in mealPlan.features.slice(0, 3)" :key="tag" class="rounded-full bg-green-100 px-2 py-1 text-xs text-green-800">
                         {{ tag }}
                     </span>
-                    <span v-if="mealPlan.dietary_tags.length > 3" class="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
-                        +{{ mealPlan.dietary_tags.length - 3 }}
+                    <span v-if="mealPlan.features.length > 3" class="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                        +{{ mealPlan.features.length - 3 }}
                     </span>
                 </div>
             </div>
@@ -135,13 +135,12 @@
 interface MealPlan {
     id: number;
     name: string;
-    type: string;
+    plan_type: string;
     description: string;
-    price: number;
-    duration_days: number;
+    price_per_meal: number;
     is_active: boolean;
     image?: string;
-    dietary_tags?: string[];
+    features?: string[];
     menu_items_count?: number;
     subscriptions_count?: number;
     orders_count?: number;

@@ -60,17 +60,28 @@
                                 <Search class="absolute top-3 left-3 h-4 w-4 text-gray-400" />
                                 <Input v-model="filters.search" placeholder="Search items..." class="pl-10" @input="handleSearch" />
                             </div>
-                            <Select v-model="filters.priority" @change="handleFilter">
-                                <option value="">All Priorities</option>
-                                <option value="critical">Critical (0 stock)</option>
-                                <option value="low">Low Stock</option>
-                                <option value="expiring">Expiring Soon</option>
+                            <Select v-model="filters.priority" @update:modelValue="handleFilter">
+                                <SelectTrigger class="w-[180px]">
+                                    <SelectValue placeholder="All Priorities" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Priorities</SelectItem>
+                                    <SelectItem value="critical">Critical (0 stock)</SelectItem>
+                                    <SelectItem value="low">Low Stock</SelectItem>
+                                    <SelectItem value="expiring">Expiring Soon</SelectItem>
+                                </SelectContent>
                             </Select>
-                            <Select v-model="filters.category" @change="handleFilter">
-                                <option value="">All Categories</option>
-                                <option v-for="category in categories" :key="category" :value="category">
-                                    {{ category }}
-                                </option>
+
+                            <Select v-model="filters.category" @update:modelValue="handleFilter">
+                                <SelectTrigger class="w-[180px]">
+                                    <SelectValue placeholder="All Categories" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Categories</SelectItem>
+                                    <SelectItem v-for="category in categories" :key="category" :value="category">
+                                        {{ category }}
+                                    </SelectItem>
+                                </SelectContent>
                             </Select>
                         </div>
                     </div>
@@ -137,7 +148,7 @@ import LowStockItemCard from '@/components/Admin/LowStockItemCard.vue';
 import RestockModal from '@/components/Admin/RestockModal.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { AlertTriangle, ArrowLeft, CheckCircle, Package, RefreshCw, Search, ShoppingCart } from 'lucide-vue-next';
