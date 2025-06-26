@@ -14,21 +14,21 @@ class MealPlanController extends Controller
 {
     public function index(Request $request)
     {
-        $query = MealPlan::with(['menuItems', 'subscriptions']);
+        $query = MealPlan::with(['menuItems', 'subscriptions'])
+            ->withCount('menuItems');
 
-        // Search
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%')
-                ->orWhere('description', 'like', '%' . $request->search . '%');
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
         }
 
-        // Filter by plan type
-        if ($request->filled('plan_type')) {
+        if ($request->filled('plan_type') && $request->plan_type !== 'all') {
             $query->where('plan_type', $request->plan_type);
         }
 
-        // Filter by status
-        if ($request->filled('status')) {
+        if ($request->filled('status') && $request->status !== 'all') {
             $isActive = $request->status === 'active';
             $query->where('is_active', $isActive);
         }
