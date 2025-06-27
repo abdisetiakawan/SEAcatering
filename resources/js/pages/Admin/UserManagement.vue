@@ -57,7 +57,6 @@
                                     <SelectValue placeholder="Subscription Status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Semua Subscription</SelectItem>
                                     <SelectItem value="active">Active Subscriber</SelectItem>
                                     <SelectItem value="inactive">No Active Subscription</SelectItem>
                                 </SelectContent>
@@ -67,7 +66,6 @@
                                     <SelectValue placeholder="Role Pengguna" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Semua Role</SelectItem>
                                     <SelectItem value="admin">Admin</SelectItem>
                                     <SelectItem value="user">Regular User</SelectItem>
                                 </SelectContent>

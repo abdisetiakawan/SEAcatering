@@ -80,7 +80,6 @@
                                     <SelectValue placeholder="Semua Supplier" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Semua Supplier</SelectItem>
                                     <SelectItem v-for="supplier in suppliers" :key="supplier" :value="supplier">
                                         {{ supplier }}
                                     </SelectItem>

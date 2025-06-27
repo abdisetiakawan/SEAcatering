@@ -93,21 +93,15 @@
 
                             <!-- Role -->
                             <div class="mb-4">
-                                <label class="mb-2 block text-sm font-medium text-gray-700">Role</label>
-                                <select v-model="form.role" class="w-full rounded-md border border-gray-300 px-3 py-2">
+                                <label class="mb-2 block text-sm font-medium text-gray-700">Role *</label>
+                                <select v-model="form.role" class="w-full rounded-md border border-gray-300 px-3 py-2" required>
+                                    <option value="user">User</option>
                                     <option value="customer">Customer</option>
                                     <option value="chef">Chef</option>
                                     <option value="driver">Driver</option>
                                     <option value="admin">Admin</option>
                                 </select>
-                            </div>
-
-                            <!-- Admin Status -->
-                            <div class="mb-4">
-                                <label class="flex items-center">
-                                    <input type="checkbox" v-model="form.is_admin" class="mr-2 text-blue-600" />
-                                    <span class="text-sm text-gray-700">Admin Access</span>
-                                </label>
+                                <p class="mt-1 text-xs text-gray-500">Admin role grants administrative privileges</p>
                             </div>
 
                             <!-- Email Verified -->
@@ -248,7 +242,7 @@ import Modal from '@/components/Modal.vue';
 import { router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
-type UserRole = 'customer' | 'chef' | 'driver' | 'admin';
+type UserRole = 'user' | 'customer' | 'chef' | 'driver' | 'admin';
 type Gender = 'male' | 'female' | 'other' | '';
 type VehicleType = 'motorcycle' | 'car' | 'van' | '';
 
@@ -258,7 +252,6 @@ interface User {
     email: string;
     phone?: string;
     role: UserRole;
-    is_admin: boolean;
     email_verified_at?: string;
     is_active: boolean;
     date_of_birth?: string;
@@ -279,7 +272,6 @@ interface UserForm {
     password: string;
     password_confirmation: string;
     role: UserRole;
-    is_admin: boolean;
     email_verified: boolean;
     is_active: boolean;
     date_of_birth: string;
@@ -323,8 +315,7 @@ const form = ref<UserForm>({
     phone: '',
     password: '',
     password_confirmation: '',
-    role: 'customer',
-    is_admin: false,
+    role: 'user',
     email_verified: false,
     is_active: true,
     date_of_birth: '',
@@ -347,8 +338,7 @@ const resetForm = (): void => {
             phone: props.user.phone || '',
             password: '',
             password_confirmation: '',
-            role: props.user.role || 'customer',
-            is_admin: props.user.is_admin || false,
+            role: props.user.role || 'user',
             email_verified: !!props.user.email_verified_at,
             is_active: props.user.is_active !== false,
             date_of_birth: props.user.date_of_birth || '',
@@ -369,8 +359,7 @@ const resetForm = (): void => {
             phone: '',
             password: '',
             password_confirmation: '',
-            role: 'customer',
-            is_admin: false,
+            role: 'user',
             email_verified: false,
             is_active: true,
             date_of_birth: '',

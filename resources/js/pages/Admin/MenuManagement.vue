@@ -37,7 +37,6 @@
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectGroup>
-                                        <SelectItem value="all">Semua Kategori</SelectItem>
                                         <SelectItem value="diet">Diet Plan</SelectItem>
                                         <SelectItem value="protein">Protein Plan</SelectItem>
                                         <SelectItem value="royal">Royal Plan</SelectItem>
@@ -54,7 +53,6 @@
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectGroup>
-                                        <SelectItem value="all">Semua Status</SelectItem>
                                         <SelectItem value="active">Aktif</SelectItem>
                                         <SelectItem value="inactive">Tidak Aktif</SelectItem>
                                     </SelectGroup>

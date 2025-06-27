@@ -65,7 +65,6 @@
                                     <SelectValue placeholder="All Priorities" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Priorities</SelectItem>
                                     <SelectItem value="critical">Critical (0 stock)</SelectItem>
                                     <SelectItem value="low">Low Stock</SelectItem>
                                     <SelectItem value="expiring">Expiring Soon</SelectItem>
@@ -77,7 +76,6 @@
                                     <SelectValue placeholder="All Categories" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Categories</SelectItem>
                                     <SelectItem v-for="category in categories" :key="category" :value="category">
                                         {{ category }}
                                     </SelectItem>
