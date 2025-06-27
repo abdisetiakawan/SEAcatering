@@ -175,7 +175,16 @@ const deletePlan = () => {
 };
 
 const toggleStatus = (plan: MealPlan) => {
-    router.patch(route('admin.meal-plans.toggle-status', plan.id));
+    router.patch(
+        route('admin.meal-plans.toggle-status', plan.id),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                router.reload({ only: ['mealPlans'] });
+            },
+        },
+    );
 };
 
 const handleSearch = () => {
@@ -198,17 +207,6 @@ const resetFilters = () => {
     filters.status = '';
     router.get(route('admin.meal-plans.index'));
 };
-watch(
-    () => filters.plan_type,
-    () => {
-        handleFilter();
-    },
-);
-
-watch(
-    () => filters.status,
-    () => {
-        handleFilter();
-    },
-);
+watch(() => filters.status, handleFilter);
+watch(() => filters.plan_type, handleFilter);
 </script>
