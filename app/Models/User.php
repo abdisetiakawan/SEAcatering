@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'phone',
         'role',
+        'email_verified_at',
     ];
 
     /**
@@ -63,5 +64,15 @@ class User extends Authenticatable
     public function addresses(): HasMany
     {
         return $this->hasMany(UserAddress::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
     }
 }
