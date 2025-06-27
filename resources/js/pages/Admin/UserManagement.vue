@@ -271,7 +271,7 @@ const handleUserSaved = () => {
 };
 
 const toggleRole = (user: UserData) => {
-    router.patch(route('admin.users.toggle-role', user.id));
+    router.patch(route('admin.users.toggle-admin', user.id));
 };
 
 const toggleSelectAll = (event: Event) => {
