@@ -92,7 +92,7 @@ class OrderController extends Controller
                 'cancelled' => 'Cancelled'
             ],
             'orderTypeOptions' => [
-                'direct' => 'Direct Order',
+                'one_time' => 'Direct Order',
                 'subscription' => 'Subscription Order'
             ]
         ]);
