@@ -392,7 +392,7 @@ const proceedToCheckout = () => {
     if (props.cartItems.length === 0) return;
 
     isProcessing.value = true;
-    router.visit(route('checkout.index'), {
+    router.visit(route('user.checkout.index'), {
         onFinish: () => {
             isProcessing.value = false;
         },
