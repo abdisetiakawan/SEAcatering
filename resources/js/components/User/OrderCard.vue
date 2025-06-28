@@ -6,7 +6,13 @@
                 <div class="flex items-center space-x-4">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900">{{ order.order_number }}</h3>
-                        <p class="text-sm text-gray-600">Ordered on {{ formatDate(order.created_at) }}</p>
+                        <div class="flex items-center space-x-2 text-sm text-gray-600">
+                            <span>{{ formatDate(order.created_at) }}</span>
+                            <span>•</span>
+                            <Badge :variant="getOrderTypeVariant(order.order_type)">
+                                {{ getOrderTypeLabel(order.order_type) }}
+                            </Badge>
+                        </div>
                     </div>
                     <OrderStatusBadge :status="order.status" />
                 </div>
@@ -45,7 +51,7 @@
             </div>
 
             <!-- Delivery Address -->
-            <div class="border-t border-gray-200 pt-4">
+            <div v-if="order.delivery_address" class="border-t border-gray-200 pt-4">
                 <div class="flex items-start space-x-3">
                     <MapPin class="mt-1 h-4 w-4 text-gray-400" />
                     <div class="flex-1">
@@ -76,7 +82,7 @@
                         Reorder
                     </Button>
                     <Button
-                        v-if="canCancelOrder(order.status)"
+                        v-if="order.can_be_cancelled"
                         variant="outline"
                         size="sm"
                         @click="$emit('cancel-order', order)"
@@ -98,12 +104,36 @@
 <script setup lang="ts">
 import OrderStatusBadge from '@/components/User/OrderStatusBadge.vue';
 import PaymentStatusBadge from '@/components/User/PaymentStatusBadge.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, MapPin, MessageSquare, RotateCcw, X } from 'lucide-vue-next';
+
+interface OrderItem {
+    id: number;
+    quantity: number;
+    price: number;
+    total: number;
+    menu_item: {
+        id: number;
+        name: string;
+        image: string;
+    };
+}
+
+interface DeliveryAddress {
+    id: number;
+    address_line_1: string;
+    address_line_2?: string;
+    city: string;
+    province: string;
+    postal_code: string;
+}
 
 interface Order {
     id: number;
     order_number: string;
+    order_type: string;
+    order_source: string;
     delivery_date: string;
     delivery_time: string;
     total_amount: number;
@@ -111,25 +141,9 @@ interface Order {
     payment_status: string;
     special_instructions?: string;
     created_at: string;
-    order_items: Array<{
-        id: number;
-        quantity: number;
-        price: number;
-        total: number;
-        menu_item: {
-            id: number;
-            name: string;
-            image: string;
-        };
-    }>;
-    delivery_address: {
-        id: number;
-        address_line_1: string;
-        address_line_2?: string;
-        city: string;
-        province: string;
-        postal_code: string;
-    };
+    can_be_cancelled: boolean;
+    order_items: OrderItem[];
+    delivery_address: DeliveryAddress | null;
 }
 
 defineProps<{
@@ -155,7 +169,11 @@ const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID').format(price);
 };
 
-const canCancelOrder = (status: string) => {
-    return ['pending', 'confirmed'].includes(status);
+const getOrderTypeVariant = (type: string) => {
+    return type === 'subscription' ? 'default' : 'secondary';
+};
+
+const getOrderTypeLabel = (type: string) => {
+    return type === 'subscription' ? 'Subscription' : 'Direct Order';
 };
 </script>

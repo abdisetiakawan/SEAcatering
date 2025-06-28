@@ -1,221 +1,201 @@
 <template>
-    <UserLayout>
-        <Head title="Invoice" />
+    <div class="min-h-screen bg-white">
+        <Head :title="`Invoice ${order.order_number}`" />
 
-        <div class="py-6">
-            <div class="mx-auto max-w-4xl sm:px-6 lg:px-8">
-                <!-- Print Header (hidden on screen) -->
-                <div class="mb-8 hidden print:block">
-                    <div class="text-center">
-                        <h1 class="text-3xl font-bold text-gray-900">SEA CATERING</h1>
-                        <p class="text-gray-600">Premium Meal Delivery Service</p>
-                        <p class="text-sm text-gray-500">Jl. Sudirman No. 123, Jakarta | Tel: (021) 123-4567</p>
+        <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+            <!-- Header -->
+            <div class="mb-8 flex items-center justify-between">
+                <Button :href="route('user.orders.show', order.id)" variant="outline" size="sm" as="Link">
+                    <ArrowLeft class="mr-2 h-4 w-4" />
+                    Back to Order
+                </Button>
+                <Button @click="printInvoice" variant="outline" size="sm">
+                    <Printer class="mr-2 h-4 w-4" />
+                    Print Invoice
+                </Button>
+            </div>
+
+            <!-- Invoice Content -->
+            <div id="invoice-content" class="rounded-lg border border-gray-200 bg-white p-8">
+                <!-- Invoice Header -->
+                <div class="mb-8 flex items-start justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">SEA Catering</h1>
+                        <p class="mt-2 text-gray-600">Premium Meal Delivery Service</p>
+                        <div class="mt-4 text-sm text-gray-600">
+                            <p>Jl. Sudirman No. 123</p>
+                            <p>Jakarta Pusat, DKI Jakarta 10220</p>
+                            <p>Phone: (021) 1234-5678</p>
+                            <p>Email: info@seacatering.com</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <h2 class="text-2xl font-bold text-gray-900">INVOICE</h2>
+                        <p class="mt-2 text-lg font-semibold text-gray-700">{{ order.order_number }}</p>
+                        <div class="mt-4 text-sm text-gray-600">
+                            <p><strong>Invoice Date:</strong> {{ formatDate(order.created_at) }}</p>
+                            <p><strong>Order Type:</strong> {{ getOrderTypeLabel(order.order_type) }}</p>
+                            <p><strong>Status:</strong> {{ order.status }}</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Invoice Content -->
-                <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg print:shadow-none">
-                    <!-- Header -->
-                    <div class="border-b border-gray-200 p-6 print:border-b-2">
-                        <div class="flex items-center justify-between print:block">
-                            <div class="print:mb-6 print:text-center">
-                                <h1 class="text-2xl font-bold text-gray-900 print:text-3xl">INVOICE</h1>
-                                <p class="mt-1 text-gray-600">Order #{{ order.order_number }}</p>
-                            </div>
-                            <div class="text-right print:text-left">
-                                <div class="flex space-x-2 print:hidden">
-                                    <Button @click="printInvoice" variant="outline">
-                                        <Printer class="mr-2 h-4 w-4" />
-                                        Print
-                                    </Button>
-                                    <Button @click="downloadPDF" variant="outline">
-                                        <Download class="mr-2 h-4 w-4" />
-                                        Download PDF
-                                    </Button>
-                                </div>
-                            </div>
+                <!-- Customer & Delivery Info -->
+                <div class="mb-8 grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <!-- Bill To -->
+                    <div>
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900">Bill To:</h3>
+                        <div class="text-gray-700">
+                            <p class="font-medium">{{ order.customer_name }}</p>
+                            <p>{{ order.customer_email }}</p>
                         </div>
                     </div>
 
-                    <!-- Invoice Details -->
-                    <div class="p-6">
-                        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 print:grid-cols-2">
-                            <!-- Company Info -->
-                            <div class="print:hidden">
-                                <h3 class="mb-3 text-lg font-semibold text-gray-900">From:</h3>
-                                <div class="text-sm text-gray-600">
-                                    <p class="font-semibold text-gray-900">SEA Catering</p>
-                                    <p>Jl. Sudirman No. 123</p>
-                                    <p>Jakarta Pusat, 10110</p>
-                                    <p>Indonesia</p>
-                                    <p class="mt-2">
-                                        <span class="font-medium">Phone:</span> (021) 123-4567<br />
-                                        <span class="font-medium">Email:</span> info@seacatering.com
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Customer Info -->
-                            <div>
-                                <h3 class="mb-3 text-lg font-semibold text-gray-900">Bill To:</h3>
-                                <div class="text-sm text-gray-600">
-                                    <p class="font-semibold text-gray-900">{{ order.customer_name }}</p>
-                                    <p>{{ order.customer_email }}</p>
-                                    <div v-if="order.delivery_address" class="mt-2">
-                                        <p class="font-medium text-gray-700">Delivery Address:</p>
-                                        <p>{{ order.delivery_address.recipient_name }}</p>
-                                        <p>{{ order.delivery_address.phone_number }}</p>
-                                        <p>{{ order.delivery_address.full_address }}</p>
-                                    </div>
-                                </div>
-                            </div>
+                    <!-- Deliver To -->
+                    <div v-if="order.delivery_address">
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900">Deliver To:</h3>
+                        <div class="text-gray-700">
+                            <p>{{ order.delivery_address.address_line_1 }}</p>
+                            <p v-if="order.delivery_address.address_line_2">{{ order.delivery_address.address_line_2 }}</p>
+                            <p>{{ order.delivery_address.city }}, {{ order.delivery_address.province }}</p>
+                            <p>{{ order.delivery_address.postal_code }}</p>
                         </div>
-
-                        <!-- Invoice Meta -->
-                        <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 print:grid-cols-3">
-                            <div>
-                                <p class="text-sm font-medium text-gray-700">Invoice Date:</p>
-                                <p class="text-sm text-gray-900">{{ formatDate(order.created_at) }}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-700">Delivery Date:</p>
-                                <p class="text-sm text-gray-900">{{ formatDate(order.delivery_date) }}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-700">Order Type:</p>
-                                <Badge :variant="order.order_type === 'subscription' ? 'default' : 'secondary'">
-                                    {{ order.order_type === 'subscription' ? 'Subscription' : 'Direct Order' }}
-                                </Badge>
-                            </div>
+                        <div class="mt-4 text-sm text-gray-600">
+                            <p><strong>Delivery Date:</strong> {{ formatDate(order.delivery_date) }}</p>
+                            <p><strong>Delivery Time:</strong> {{ order.delivery_time }}</p>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Order Items -->
-                        <div class="mt-8">
-                            <h3 class="mb-4 text-lg font-semibold text-gray-900">Order Items</h3>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50 print:bg-gray-100">
-                                        <tr>
-                                            <th class="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Item</th>
-                                            <th class="px-4 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">Qty</th>
-                                            <th class="px-4 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Price</th>
-                                            <th class="px-4 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-200 bg-white">
-                                        <tr v-for="item in order.order_items" :key="item.id">
-                                            <td class="px-4 py-4">
-                                                <div class="flex items-center print:block">
-                                                    <img
-                                                        v-if="item.menu_item.image"
-                                                        :src="item.menu_item.image"
-                                                        :alt="item.menu_item.name"
-                                                        class="mr-4 h-12 w-12 rounded-lg object-cover print:hidden"
-                                                    />
-                                                    <div>
-                                                        <p class="text-sm font-medium text-gray-900">{{ item.menu_item.name }}</p>
-                                                        <p class="text-sm text-gray-500">{{ item.menu_item.category }}</p>
-                                                        <div
-                                                            v-if="item.menu_item.calories || item.menu_item.protein"
-                                                            class="mt-1 text-xs text-gray-400"
-                                                        >
-                                                            <span v-if="item.menu_item.calories">{{ item.menu_item.calories }} cal</span>
-                                                            <span v-if="item.menu_item.protein" class="ml-2"
-                                                                >{{ item.menu_item.protein }}g protein</span
-                                                            >
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="px-4 py-4 text-center text-sm text-gray-900">{{ item.quantity }}</td>
-                                            <td class="px-4 py-4 text-right text-sm text-gray-900">{{ formatCurrency(item.price) }}</td>
-                                            <td class="px-4 py-4 text-right text-sm font-medium text-gray-900">
-                                                {{ formatCurrency(item.total_price) }}
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Order Summary -->
-                        <div class="mt-8 flex justify-end">
-                            <div class="w-full max-w-md">
-                                <div class="space-y-2">
-                                    <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">Subtotal:</span>
-                                        <span class="font-medium">{{ formatCurrency(order.subtotal) }}</span>
-                                    </div>
-                                    <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">Delivery Fee:</span>
-                                        <span class="font-medium" :class="order.delivery_fee === 0 ? 'text-green-600' : ''">
-                                            {{ order.delivery_fee === 0 ? 'FREE' : formatCurrency(order.delivery_fee) }}
-                                        </span>
-                                    </div>
-                                    <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">Tax (11%):</span>
-                                        <span class="font-medium">{{ formatCurrency(order.tax_amount) }}</span>
-                                    </div>
-                                    <div class="border-t pt-2">
-                                        <div class="flex justify-between text-lg font-semibold">
-                                            <span>Total:</span>
-                                            <span class="text-green-600">{{ formatCurrency(order.total_amount) }}</span>
+                <!-- Order Items -->
+                <div class="mb-8">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900">Order Items</h3>
+                    <div class="overflow-hidden rounded-lg border border-gray-200">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Item</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Quantity</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Unit Price</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 bg-white">
+                                <tr v-for="item in order.order_items" :key="item.id">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900">{{ item.menu_item.name }}</div>
+                                            <div class="text-sm text-gray-500">{{ item.menu_item.description }}</div>
                                         </div>
-                                    </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+                                        {{ item.quantity }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">Rp {{ formatPrice(item.price) }}</td>
+                                    <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">Rp {{ formatPrice(item.total) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="mb-8 flex justify-end">
+                    <div class="w-full max-w-sm">
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Subtotal:</span>
+                                <span class="text-gray-900">Rp {{ formatPrice(order.subtotal) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Tax (10%):</span>
+                                <span class="text-gray-900">Rp {{ formatPrice(order.tax_amount) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Delivery Fee:</span>
+                                <span class="text-gray-900">Rp {{ formatPrice(order.delivery_fee) }}</span>
+                            </div>
+                            <div class="border-t border-gray-200 pt-2">
+                                <div class="flex justify-between">
+                                    <span class="text-lg font-semibold text-gray-900">Total Amount:</span>
+                                    <span class="text-lg font-semibold text-gray-900">Rp {{ formatPrice(order.total_amount) }}</span>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Payment & Status Info -->
-                        <div class="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 print:grid-cols-2">
-                            <div>
-                                <h4 class="mb-2 text-sm font-medium text-gray-700">Order Status:</h4>
-                                <Badge :variant="getStatusVariant(order.status)">
-                                    {{ getStatusLabel(order.status) }}
-                                </Badge>
-                            </div>
-                            <div>
-                                <h4 class="mb-2 text-sm font-medium text-gray-700">Payment Status:</h4>
-                                <Badge :variant="order.payment_status === 'completed' ? 'default' : 'secondary'">
-                                    {{ order.payment_status === 'completed' ? 'Paid' : 'Pending' }}
-                                </Badge>
-                            </div>
-                        </div>
-
-                        <!-- Special Instructions -->
-                        <div v-if="order.special_instructions" class="mt-6">
-                            <h4 class="mb-2 text-sm font-medium text-gray-700">Special Instructions:</h4>
-                            <p class="rounded-md bg-gray-50 p-3 text-sm text-gray-600">{{ order.special_instructions }}</p>
-                        </div>
-
-                        <!-- Footer -->
-                        <div class="mt-8 border-t border-gray-200 pt-6 print:border-t-2">
-                            <div class="text-center text-sm text-gray-500">
-                                <p class="font-medium">Thank you for choosing SEA Catering!</p>
-                                <p class="mt-1">For any questions about this invoice, please contact us at info@seacatering.com</p>
-                                <p class="mt-2 print:mt-4"><span class="font-medium">Generated on:</span> {{ formatDateTime(new Date()) }}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Back Button -->
-                <div class="mt-6 print:hidden">
-                    <Link :href="route('user.orders.show', order.id)" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
-                        <ArrowLeft class="mr-2 h-4 w-4" />
-                        Back to Order Details
-                    </Link>
+                <!-- Payment Information -->
+                <div class="mb-8">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900">Payment Information</h3>
+                    <div class="rounded-lg bg-gray-50 p-4">
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Payment Method</p>
+                                <p class="text-gray-900 capitalize">{{ order.payment_method }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Payment Status</p>
+                                <PaymentStatusBadge :status="order.payment_status" />
+                            </div>
+                            <div v-if="order.payment?.payment_date">
+                                <p class="text-sm font-medium text-gray-600">Payment Date</p>
+                                <p class="text-gray-900">{{ formatDate(order.payment.payment_date) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special Instructions -->
+                <div v-if="order.special_instructions" class="mb-8">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900">Special Instructions</h3>
+                    <div class="rounded-lg bg-gray-50 p-4">
+                        <p class="text-gray-700">{{ order.special_instructions }}</p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="border-t border-gray-200 pt-8 text-center text-sm text-gray-600">
+                    <p>Thank you for choosing SEA Catering!</p>
+                    <p class="mt-2">For any questions about this invoice, please contact us at info@seacatering.com</p>
+                    <p class="mt-4">This is a computer-generated invoice and does not require a signature.</p>
                 </div>
             </div>
         </div>
-    </UserLayout>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge';
+import PaymentStatusBadge from '@/components/User/PaymentStatusBadge.vue';
 import { Button } from '@/components/ui/button';
-import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, Download, Printer } from 'lucide-vue-next';
+import { Head } from '@inertiajs/vue3';
+import { ArrowLeft, Printer } from 'lucide-vue-next';
+
+interface OrderItem {
+    id: number;
+    quantity: number;
+    price: number;
+    total: number;
+    menu_item: {
+        name: string;
+        description: string;
+    };
+}
+
+interface DeliveryAddress {
+    address_line_1: string;
+    address_line_2?: string;
+    city: string;
+    province: string;
+    postal_code: string;
+}
+
+interface Payment {
+    amount: number;
+    status: string;
+    payment_method: string;
+    payment_date?: string;
+}
 
 interface Order {
     id: number;
@@ -223,7 +203,7 @@ interface Order {
     order_type: string;
     order_source: string;
     delivery_date: string;
-    delivery_time_slot: string;
+    delivery_time: string;
     subtotal: number;
     tax_amount: number;
     delivery_fee: number;
@@ -231,43 +211,20 @@ interface Order {
     special_instructions?: string;
     status: string;
     payment_status: string;
+    payment_method: string;
     created_at: string;
     customer_name: string;
     customer_email: string;
-    delivery_address?: {
-        recipient_name: string;
-        phone_number: string;
-        full_address: string;
-    };
-    order_items: Array<{
-        id: number;
-        menu_item: {
-            name: string;
-            category: string;
-            image?: string;
-            calories?: number;
-            protein?: number;
-        };
-        quantity: number;
-        price: number;
-        total_price: number;
-    }>;
-    payment?: any;
+    delivery_address: DeliveryAddress | null;
+    order_items: OrderItem[];
+    payment: Payment | null;
 }
 
 const props = defineProps<{
     order: Order;
 }>();
 
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(amount);
-};
-
+// Methods
 const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('id-ID', {
         year: 'numeric',
@@ -276,49 +233,15 @@ const formatDate = (date: string) => {
     });
 };
 
-const formatDateTime = (date: Date) => {
-    return date.toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('id-ID').format(price);
 };
 
-const getStatusVariant = (status: string): 'default' | 'destructive' | 'outline' | 'secondary' => {
-    const variants: Record<string, 'default' | 'destructive' | 'outline' | 'secondary'> = {
-        pending: 'secondary',
-        confirmed: 'default',
-        preparing: 'outline',
-        ready: 'default',
-        out_for_delivery: 'default',
-        delivered: 'default',
-        cancelled: 'destructive',
-    };
-    return variants[status] || 'default';
-};
-
-const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-        pending: 'Pending',
-        confirmed: 'Confirmed',
-        preparing: 'Preparing',
-        ready: 'Ready',
-        out_for_delivery: 'Out for Delivery',
-        delivered: 'Delivered',
-        cancelled: 'Cancelled',
-    };
-    return labels[status] || status;
+const getOrderTypeLabel = (type: string) => {
+    return type === 'subscription' ? 'Subscription Order' : 'Direct Order';
 };
 
 const printInvoice = () => {
-    window.print();
-};
-
-const downloadPDF = () => {
-    // This would typically integrate with a PDF generation service
-    // For now, we'll just trigger the print dialog
     window.print();
 };
 </script>
@@ -328,59 +251,15 @@ const downloadPDF = () => {
     body * {
         visibility: hidden;
     }
-
-    .print\:block,
-    .print\:block * {
+    #invoice-content,
+    #invoice-content * {
         visibility: visible;
     }
-
-    .print\:hidden {
-        display: none !important;
-    }
-
-    .print\:shadow-none {
-        box-shadow: none !important;
-    }
-
-    .print\:border-b-2 {
-        border-bottom-width: 2px !important;
-    }
-
-    .print\:border-t-2 {
-        border-top-width: 2px !important;
-    }
-
-    .print\:bg-gray-100 {
-        background-color: #f3f4f6 !important;
-    }
-
-    .print\:grid-cols-2 {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-
-    .print\:grid-cols-3 {
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    }
-
-    .print\:text-center {
-        text-align: center !important;
-    }
-
-    .print\:text-left {
-        text-align: left !important;
-    }
-
-    .print\:text-3xl {
-        font-size: 1.875rem !important;
-        line-height: 2.25rem !important;
-    }
-
-    .print\:mb-6 {
-        margin-bottom: 1.5rem !important;
-    }
-
-    .print\:mt-4 {
-        margin-top: 1rem !important;
+    #invoice-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
     }
 }
 </style>

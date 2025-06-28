@@ -10,7 +10,6 @@ use App\Models\UserAddress;
 use App\Models\Cart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Session;
 use Inertia\Inertia;
 
 class OrderController extends Controller
@@ -32,6 +31,19 @@ class OrderController extends Controller
             $query->where('order_type', $request->order_type);
         }
 
+        // Search by order number
+        if ($request->filled('search')) {
+            $query->where('order_number', 'like', '%' . $request->search . '%');
+        }
+
+        // Date range filter
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
         $orders = $query->orderBy('created_at', 'desc')
             ->paginate(10)
             ->through(function ($order) {
@@ -40,20 +52,50 @@ class OrderController extends Controller
                     'order_number' => $order->order_number,
                     'order_type' => $order->order_type,
                     'order_source' => $order->order_source,
-                    'delivery_date' => $order->delivery_date,
-                    'delivery_time_slot' => $order->delivery_time_slot,
+                    'delivery_date' => $order->delivery_date?->format('Y-m-d'),
+                    'delivery_time' => $order->delivery_time_slot,
                     'total_amount' => $order->total_amount,
                     'status' => $order->status,
                     'payment_status' => $order->payment_status,
+                    'special_instructions' => $order->special_instructions,
+                    'created_at' => $order->created_at->format('Y-m-d H:i:s'),
                     'can_be_cancelled' => $order->can_be_cancelled,
-                    'created_at' => $order->created_at,
-                    'items_count' => $order->orderItems->count(),
+                    'order_items' => $order->orderItems->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'quantity' => $item->quantity,
+                            'price' => $item->price,
+                            'total' => $item->total_price,
+                            'menu_item' => [
+                                'id' => $item->menuItem->id,
+                                'name' => $item->menuItem->name,
+                                'image' => $item->menuItem->image,
+                            ]
+                        ];
+                    }),
+                    'delivery_address' => $order->deliveryAddress ? [
+                        'id' => $order->deliveryAddress->id,
+                        'address_line_1' => $order->deliveryAddress->address_line_1,
+                        'address_line_2' => $order->deliveryAddress->address_line_2,
+                        'city' => $order->deliveryAddress->city,
+                        'province' => $order->deliveryAddress->province,
+                        'postal_code' => $order->deliveryAddress->postal_code,
+                    ] : null,
                 ];
             });
 
+        // Calculate stats
+        $stats = [
+            'pending' => Order::where('user_id', $user->id)->where('status', 'pending')->count(),
+            'preparing' => Order::where('user_id', $user->id)->whereIn('status', ['confirmed', 'preparing'])->count(),
+            'out_for_delivery' => Order::where('user_id', $user->id)->where('status', 'out_for_delivery')->count(),
+            'delivered' => Order::where('user_id', $user->id)->where('status', 'delivered')->count(),
+        ];
+
         return Inertia::render('User/Orders/Index', [
             'orders' => $orders,
-            'filters' => $request->only(['status', 'order_type']),
+            'stats' => $stats,
+            'filters' => $request->only(['status', 'order_type', 'search', 'from_date', 'to_date']),
             'statusOptions' => [
                 'pending' => 'Pending',
                 'confirmed' => 'Confirmed',
@@ -90,8 +132,8 @@ class OrderController extends Controller
                 'order_number' => $order->order_number,
                 'order_type' => $order->order_type,
                 'order_source' => $order->order_source,
-                'delivery_date' => $order->delivery_date,
-                'delivery_time_slot' => $order->delivery_time_slot,
+                'delivery_date' => $order->delivery_date?->format('Y-m-d'),
+                'delivery_time' => $order->delivery_time_slot,
                 'subtotal' => $order->subtotal,
                 'tax_amount' => $order->tax_amount,
                 'delivery_fee' => $order->delivery_fee,
@@ -99,118 +141,54 @@ class OrderController extends Controller
                 'special_instructions' => $order->special_instructions,
                 'status' => $order->status,
                 'payment_status' => $order->payment_status,
+                'payment_method' => $order->payment_method,
                 'can_be_cancelled' => $order->can_be_cancelled,
-                'created_at' => $order->created_at,
-                'delivery_address' => $order->deliveryAddress,
+                'created_at' => $order->created_at->format('Y-m-d H:i:s'),
+                'customer_name' => $order->customer_name,
+                'customer_email' => $order->customer_email,
+                'delivery_address' => $order->deliveryAddress ? [
+                    'id' => $order->deliveryAddress->id,
+                    'address_line_1' => $order->deliveryAddress->address_line_1,
+                    'address_line_2' => $order->deliveryAddress->address_line_2,
+                    'city' => $order->deliveryAddress->city,
+                    'province' => $order->deliveryAddress->province,
+                    'postal_code' => $order->deliveryAddress->postal_code,
+                ] : null,
                 'order_items' => $order->orderItems->map(function ($item) {
                     return [
                         'id' => $item->id,
-                        'menu_item' => $item->menuItem,
                         'quantity' => $item->quantity,
                         'price' => $item->price,
-                        'total_price' => $item->total_price,
+                        'total' => $item->total_price,
+                        'menu_item' => [
+                            'id' => $item->menuItem->id,
+                            'name' => $item->menuItem->name,
+                            'description' => $item->menuItem->description,
+                            'image' => $item->menuItem->image,
+                            'category' => $item->menuItem->category,
+                        ]
                     ];
                 }),
-                'payment' => $order->payment,
-                'delivery' => $order->delivery,
+                'payment' => $order->payment ? [
+                    'id' => $order->payment->id,
+                    'amount' => $order->payment->amount,
+                    'status' => $order->payment->status,
+                    'payment_method' => $order->payment->payment_method,
+                    'payment_date' => $order->payment->payment_date?->format('Y-m-d H:i:s'),
+                ] : null,
+                'delivery' => $order->delivery ? [
+                    'id' => $order->delivery->id,
+                    'status' => $order->delivery->status,
+                    'tracking_number' => $order->delivery->tracking_number,
+                    'estimated_delivery' => $order->delivery->estimated_delivery?->format('Y-m-d H:i:s'),
+                    'delivered_at' => $order->delivery->delivered_at?->format('Y-m-d H:i:s'),
+                    'driver' => $order->delivery->driver ? [
+                        'name' => $order->delivery->driver->name,
+                        'phone' => $order->delivery->driver->phone,
+                    ] : null,
+                ] : null,
             ]
         ]);
-    }
-
-    public function store(Request $request)
-    {
-        $request->validate([
-            'delivery_address_id' => 'required|exists:user_addresses,id',
-            'delivery_date' => 'required|date|after:today',
-            'delivery_time' => 'required|string',
-            'special_instructions' => 'nullable|string|max:500',
-            'payment_method' => 'required|in:cash,card,bank_transfer'
-        ]);
-
-        // Verify address belongs to user
-        $address = UserAddress::where('id', $request->delivery_address_id)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
-
-        $cart = Session::get('cart', []);
-        if (empty($cart)) {
-            return back()->withErrors(['message' => 'Your cart is empty.']);
-        }
-
-        DB::beginTransaction();
-        try {
-            // Get menu items and calculate total
-            $menuItemIds = array_keys($cart);
-            $menuItems = MenuItem::whereIn('id', $menuItemIds)
-                ->where('is_available', true)
-                ->get()
-                ->keyBy('id');
-
-            $subtotal = 0;
-            $orderItems = [];
-
-            foreach ($cart as $itemId => $quantity) {
-                if (!isset($menuItems[$itemId])) {
-                    throw new \Exception("Some items in your cart are no longer available.");
-                }
-
-                $menuItem = $menuItems[$itemId];
-                $itemTotal = $menuItem->price * $quantity;
-                $subtotal += $itemTotal;
-
-                $orderItems[] = [
-                    'menu_item_id' => $itemId,
-                    'quantity' => $quantity,
-                    'price' => $menuItem->price,
-                    'total' => $itemTotal
-                ];
-            }
-
-            // Calculate delivery fee and tax
-            $deliveryFee = 5000; // Fixed delivery fee
-            $taxRate = 0.1; // 10% tax
-            $tax = $subtotal * $taxRate;
-            $totalAmount = $subtotal + $deliveryFee + $tax;
-
-            // Create order
-            $order = Order::create([
-                'user_id' => auth()->id(),
-                'order_number' => 'ORD-' . strtoupper(uniqid()),
-                'delivery_address_id' => $request->delivery_address_id,
-                'delivery_date' => $request->delivery_date,
-                'delivery_time' => $request->delivery_time,
-                'special_instructions' => $request->special_instructions,
-                'subtotal' => $subtotal,
-                'delivery_fee' => $deliveryFee,
-                'tax' => $tax,
-                'total_amount' => $totalAmount,
-                'status' => 'pending',
-                'payment_method' => $request->payment_method,
-                'payment_status' => 'pending'
-            ]);
-
-            // Create order items
-            foreach ($orderItems as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'menu_item_id' => $item['menu_item_id'],
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
-                    'total' => $item['total']
-                ]);
-            }
-
-            // Clear cart
-            Session::forget('cart');
-
-            DB::commit();
-
-            return redirect()->route('user.orders.show', $order)
-                ->with('success', 'Order placed successfully!');
-        } catch (\Exception $e) {
-            DB::rollback();
-            return back()->withErrors(['message' => $e->getMessage()]);
-        }
     }
 
     public function cancel(Order $order)
@@ -279,8 +257,8 @@ class OrderController extends Controller
                 'order_number' => $order->order_number,
                 'order_type' => $order->order_type,
                 'order_source' => $order->order_source,
-                'delivery_date' => $order->delivery_date,
-                'delivery_time_slot' => $order->delivery_time_slot,
+                'delivery_date' => $order->delivery_date?->format('Y-m-d'),
+                'delivery_time' => $order->delivery_time_slot,
                 'subtotal' => $order->subtotal,
                 'tax_amount' => $order->tax_amount,
                 'delivery_fee' => $order->delivery_fee,
@@ -288,20 +266,35 @@ class OrderController extends Controller
                 'special_instructions' => $order->special_instructions,
                 'status' => $order->status,
                 'payment_status' => $order->payment_status,
-                'created_at' => $order->created_at,
+                'payment_method' => $order->payment_method,
+                'created_at' => $order->created_at->format('Y-m-d H:i:s'),
                 'customer_name' => $order->customer_name,
                 'customer_email' => $order->customer_email,
-                'delivery_address' => $order->deliveryAddress,
+                'delivery_address' => $order->deliveryAddress ? [
+                    'address_line_1' => $order->deliveryAddress->address_line_1,
+                    'address_line_2' => $order->deliveryAddress->address_line_2,
+                    'city' => $order->deliveryAddress->city,
+                    'province' => $order->deliveryAddress->province,
+                    'postal_code' => $order->deliveryAddress->postal_code,
+                ] : null,
                 'order_items' => $order->orderItems->map(function ($item) {
                     return [
                         'id' => $item->id,
-                        'menu_item' => $item->menuItem,
                         'quantity' => $item->quantity,
                         'price' => $item->price,
-                        'total_price' => $item->total_price,
+                        'total' => $item->total_price,
+                        'menu_item' => [
+                            'name' => $item->menuItem->name,
+                            'description' => $item->menuItem->description,
+                        ]
                     ];
                 }),
-                'payment' => $order->payment,
+                'payment' => $order->payment ? [
+                    'amount' => $order->payment->amount,
+                    'status' => $order->payment->status,
+                    'payment_method' => $order->payment->payment_method,
+                    'payment_date' => $order->payment->payment_date?->format('Y-m-d H:i:s'),
+                ] : null,
             ]
         ]);
     }

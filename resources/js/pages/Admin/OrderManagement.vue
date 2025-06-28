@@ -43,12 +43,12 @@
                         <div class="text-sm text-gray-600">Today</div>
                     </div>
                     <div class="rounded-lg bg-white p-4 shadow-sm">
-                        <div class="text-2xl font-bold text-cyan-600">{{ stats.subscription_orders }}</div>
-                        <div class="text-sm text-gray-600">Subscription</div>
+                        <div class="text-2xl font-bold text-teal-600">{{ stats.direct_orders }}</div>
+                        <div class="text-sm text-gray-600">Direct Orders</div>
                     </div>
                     <div class="rounded-lg bg-white p-4 shadow-sm">
-                        <div class="text-2xl font-bold text-pink-600">{{ stats.direct_orders }}</div>
-                        <div class="text-sm text-gray-600">Direct</div>
+                        <div class="text-2xl font-bold text-pink-600">{{ stats.subscription_orders }}</div>
+                        <div class="text-sm text-gray-600">Subscription Orders</div>
                     </div>
                 </div>
 
@@ -61,24 +61,24 @@
                                 <Input v-model="filters.search" placeholder="Cari order..." class="pl-10" @input="handleSearch" />
                             </div>
 
-                            <Select :model-value="filters.status" @update:model-value="updateFilter('status', $event)">
+                            <Select v-model="filters.status" @update:model-value="handleFilter">
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Pilih Status" />
+                                    <SelectValue placeholder="All Status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Semua Status</SelectItem>
+                                    <SelectItem value="all">All Status</SelectItem>
                                     <SelectItem v-for="(label, value) in statusOptions" :key="value" :value="value">
                                         {{ label }}
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
 
-                            <Select :model-value="filters.order_type" @update:model-value="updateFilter('order_type', $event)">
+                            <Select v-model="filters.order_type" @update:model-value="handleFilter">
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Tipe Order" />
+                                    <SelectValue placeholder="All Types" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Semua Tipe</SelectItem>
+                                    <SelectItem value="all">All Types</SelectItem>
                                     <SelectItem v-for="(label, value) in orderTypeOptions" :key="value" :value="value">
                                         {{ label }}
                                     </SelectItem>
@@ -87,6 +87,7 @@
 
                             <Input v-model="filters.delivery_date" type="date" @change="handleFilter" />
                             <Input v-model="filters.date_from" type="date" placeholder="Dari tanggal" @change="handleFilter" />
+
                             <Button variant="outline" @click="resetFilters">
                                 <RefreshCw class="mr-2 h-4 w-4" />
                                 Reset Filter
@@ -103,7 +104,7 @@
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Order</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Customer</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Source</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Type</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Delivery Date</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Status</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Total</th>
@@ -114,18 +115,16 @@
                                 <tr v-for="order in orders.data" :key="order.id">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">{{ order.order_number }}</div>
-                                        <div class="flex items-center space-x-2">
-                                            <Badge :variant="order.order_type === 'subscription' ? 'default' : 'secondary'" class="text-xs">
-                                                {{ orderTypeOptions[order.order_type] }}
-                                            </Badge>
-                                        </div>
+                                        <div class="text-sm text-gray-500">{{ order.plan_name }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">{{ order.customer_name }}</div>
                                         <div class="text-sm text-gray-500">{{ order.customer_email }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">{{ order.order_source }}</div>
+                                        <Badge :variant="getOrderTypeVariant(order.order_type)">
+                                            {{ orderTypeOptions[order.order_type] }}
+                                        </Badge>
                                     </td>
                                     <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                                         {{ formatDate(order.delivery_date) }}
@@ -192,13 +191,13 @@ interface Order {
     order_type: OrderType;
     customer_name: string;
     customer_email: string;
-    order_source: string;
     delivery_date: string;
     delivery_time_slot: string;
     total_amount: number;
     status: OrderStatus;
     payment_status: string;
     created_at: string;
+    plan_name: string;
 }
 
 const props = defineProps<{
@@ -213,15 +212,7 @@ const props = defineProps<{
 const showStatusModal = ref(false);
 const selectedOrder = ref<Order | undefined>(undefined);
 
-interface Filters {
-    search: string;
-    status: string;
-    order_type: string;
-    delivery_date: string;
-    date_from: string;
-}
-
-const filters = reactive<Filters>({
+const filters = reactive({
     search: props.filters.search || '',
     status: props.filters.status || 'all',
     order_type: props.filters.order_type || 'all',
@@ -247,11 +238,15 @@ const getStatusVariant = (status: string): 'default' | 'destructive' | 'outline'
         confirmed: 'default',
         preparing: 'outline',
         ready: 'default',
-        out_for_delivery: 'default',
+        out_for_delivery: 'outline',
         delivered: 'default',
         cancelled: 'destructive',
     };
     return variants[status] || 'default';
+};
+
+const getOrderTypeVariant = (type: string): 'default' | 'secondary' => {
+    return type === 'subscription' ? 'default' : 'secondary';
 };
 
 const formatDate = (date: string) => {
@@ -276,14 +271,9 @@ const handleFilter = () => {
     });
 };
 
-const updateFilter = (key: keyof Filters, value: string) => {
-    filters[key] = value;
-    handleFilter();
-};
-
 const resetFilters = () => {
-    (Object.keys(filters) as (keyof Filters)[]).forEach((key) => {
-        filters[key] = key === 'status' || key === 'order_type' ? 'all' : '';
+    Object.keys(filters).forEach((key) => {
+        filters[key as keyof typeof filters] = '';
     });
     router.get(route('admin.orders.index'));
 };

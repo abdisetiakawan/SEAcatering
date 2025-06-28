@@ -14,6 +14,10 @@ class Order extends Model
         'subscription_id',
         'order_number',
         'order_type',
+        'order_source',
+        'customer_name',
+        'customer_email',
+        'customer_phone',
         'delivery_address_id',
         'delivery_date',
         'delivery_time_slot',
@@ -24,6 +28,7 @@ class Order extends Model
         'special_instructions',
         'status',
         'payment_status',
+        'payment_method',
         'cancelled_at',
     ];
 
@@ -36,6 +41,7 @@ class Order extends Model
         'cancelled_at' => 'datetime',
     ];
 
+    // Relationships
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -77,14 +83,14 @@ class Order extends Model
         return $query->whereDate('delivery_date', today());
     }
 
-    public function scopeSubscriptionOrders($query)
-    {
-        return $query->where('order_type', 'subscription');
-    }
-
-    public function scopeDirectOrders($query)
+    public function scopeDirect($query)
     {
         return $query->where('order_type', 'direct');
+    }
+
+    public function scopeSubscription($query)
+    {
+        return $query->where('order_type', 'subscription');
     }
 
     // Accessors
@@ -98,9 +104,20 @@ class Order extends Model
         return in_array($this->status, ['pending', 'confirmed']);
     }
 
-    public function getIsSubscriptionOrderAttribute()
+    public function getCustomerNameAttribute()
     {
-        return $this->order_type === 'subscription';
+        if ($this->order_type === 'subscription' && $this->subscription) {
+            return $this->subscription->user->name;
+        }
+        return $this->attributes['customer_name'] ?? $this->user->name;
+    }
+
+    public function getCustomerEmailAttribute()
+    {
+        if ($this->order_type === 'subscription' && $this->subscription) {
+            return $this->subscription->user->email;
+        }
+        return $this->attributes['customer_email'] ?? $this->user->email;
     }
 
     public function getIsDirectOrderAttribute()
@@ -108,24 +125,12 @@ class Order extends Model
         return $this->order_type === 'direct';
     }
 
-    public function getCustomerNameAttribute()
+    public function getIsSubscriptionOrderAttribute()
     {
-        return $this->user->name ?? 'Unknown Customer';
+        return $this->order_type === 'subscription';
     }
 
-    public function getCustomerEmailAttribute()
-    {
-        return $this->user->email ?? 'Unknown Email';
-    }
-
-    public function getOrderSourceAttribute()
-    {
-        if ($this->is_subscription_order && $this->subscription) {
-            return $this->subscription->mealPlan->name ?? 'Subscription Order';
-        }
-        return 'Direct Order';
-    }
-
+    // Boot method
     protected static function boot()
     {
         parent::boot();
@@ -133,6 +138,12 @@ class Order extends Model
         static::creating(function ($order) {
             if (!$order->order_number) {
                 $order->order_number = 'ORD-' . strtoupper(uniqid());
+            }
+
+            // Set customer info from user if not provided
+            if (!$order->customer_name && $order->user) {
+                $order->customer_name = $order->user->name;
+                $order->customer_email = $order->user->email;
             }
         });
     }
