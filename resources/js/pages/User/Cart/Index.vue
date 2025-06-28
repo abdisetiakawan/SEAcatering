@@ -309,7 +309,7 @@ const updateQuantity = (cartId: number, quantity: number) => {
     }
 
     router.patch(
-        route('cart.update', cartId),
+        route('user.cart.update', cartId),
         {
             quantity: quantity,
         },
@@ -326,7 +326,7 @@ const updateQuantity = (cartId: number, quantity: number) => {
 };
 
 const removeItem = (cartId: number) => {
-    router.delete(route('cart.remove', cartId), {
+    router.delete(route('user.cart.remove', cartId), {
         preserveScroll: true,
         onSuccess: () => {
             successTitle.value = 'Item Removed';
@@ -341,7 +341,7 @@ const clearCart = () => {
 };
 
 const confirmClearCart = () => {
-    router.delete(route('cart.clear'), {
+    router.delete(route('user.cart.clear'), {
         onSuccess: () => {
             showClearModal.value = false;
             successTitle.value = 'Cart Cleared';
@@ -353,7 +353,7 @@ const confirmClearCart = () => {
 
 const addToCart = (item: RecommendedItem) => {
     router.post(
-        route('cart.add'),
+        route('user.cart.add'),
         {
             menu_item_id: item.id,
             quantity: 1,
@@ -373,7 +373,7 @@ const applyPromoCode = () => {
     if (!promoCode.value.trim()) return;
 
     router.post(
-        route('cart.apply-promo'),
+        route('user.cart.apply-promo'),
         {
             promo_code: promoCode.value,
         },
@@ -383,9 +383,6 @@ const applyPromoCode = () => {
                 successTitle.value = 'Promo Applied';
                 successMessage.value = 'Promo code has been applied successfully.';
                 showSuccessModal.value = true;
-            },
-            onError: () => {
-                // Handle promo code error
             },
         },
     );
