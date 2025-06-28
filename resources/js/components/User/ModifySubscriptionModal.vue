@@ -184,7 +184,7 @@ watch(
 
             // Load user addresses
             router.get(
-                route('addresses.index'),
+                route('user.addresses.index'),
                 {},
                 {
                     onSuccess: (page: any) => {
