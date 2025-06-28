@@ -1,0 +1,163 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Inventory;
+use Illuminate\Database\Seeder;
+
+class InventorySeeder extends Seeder
+{
+    public function run(): void
+    {
+        $inventories = [
+            [
+                'menu_item_id' => 1,
+                'current_stock' => 50,
+                'minimum_stock' => 10,
+                'maximum_stock' => 100,
+                'unit' => 'porsi',
+                'cost_per_unit' => 15000,
+                'supplier' => 'Supplier Gudeg Jogja',
+                'last_restocked_at' => now()->subDays(2),
+                'expiry_date' => now()->addDays(3),
+                'status' => 'active',
+            ],
+            [
+                'menu_item_id' => 2,
+                'current_stock' => 30,
+                'minimum_stock' => 8,
+                'maximum_stock' => 80,
+                'unit' => 'porsi',
+                'cost_per_unit' => 22000,
+                'supplier' => 'Supplier Ayam Lombok',
+                'last_restocked_at' => now()->subDays(1),
+                'expiry_date' => now()->addDays(2),
+                'status' => 'active',
+            ],
+            [
+                'menu_item_id' => 3,
+                'current_stock' => 25,
+                'minimum_stock' => 5,
+                'maximum_stock' => 60,
+                'unit' => 'porsi',
+                'cost_per_unit' => 28000,
+                'supplier' => 'Supplier Rendang Padang',
+                'last_restocked_at' => now()->subDays(3),
+                'expiry_date' => now()->addDays(4),
+                'status' => 'active',
+            ],
+            [
+                'menu_item_id' => 4,
+                'current_stock' => 8,
+                'minimum_stock' => 10,
+                'maximum_stock' => 70,
+                'unit' => 'porsi',
+                'cost_per_unit' => 25000,
+                'supplier' => 'Supplier Seafood Bali',
+                'last_restocked_at' => now()->subDays(4),
+                'expiry_date' => now()->addDays(1),
+                'status' => 'discontinued',
+            ],
+            [
+                'menu_item_id' => 5,
+                'current_stock' => 40,
+                'minimum_stock' => 15,
+                'maximum_stock' => 90,
+                'unit' => 'porsi',
+                'cost_per_unit' => 12000,
+                'supplier' => 'Supplier Sayuran Jakarta',
+                'last_restocked_at' => now()->subHours(12),
+                'expiry_date' => now()->addDays(2),
+                'status' => 'active',
+            ],
+            [
+                'menu_item_id' => 6,
+                'current_stock' => 35,
+                'minimum_stock' => 12,
+                'maximum_stock' => 75,
+                'unit' => 'porsi',
+                'cost_per_unit' => 10000,
+                'supplier' => 'Supplier Lumpia Semarang',
+                'last_restocked_at' => now()->subDays(1),
+                'expiry_date' => now()->addDays(3),
+                'status' => 'active',
+            ],
+            [
+                'menu_item_id' => 7,
+                'current_stock' => 60,
+                'minimum_stock' => 20,
+                'maximum_stock' => 120,
+                'unit' => 'porsi',
+                'cost_per_unit' => 8000,
+                'supplier' => 'Supplier Es Jakarta',
+                'last_restocked_at' => now()->subHours(6),
+                'expiry_date' => now()->addDays(1),
+                'status' => 'active',
+            ],
+            [
+                'menu_item_id' => 8,
+                'current_stock' => 45,
+                'minimum_stock' => 15,
+                'maximum_stock' => 100,
+                'unit' => 'porsi',
+                'cost_per_unit' => 6000,
+                'supplier' => 'Supplier Kue Tradisional',
+                'last_restocked_at' => now()->subDays(2),
+                'expiry_date' => now()->addDays(2),
+                'status' => 'active',
+            ],
+            [
+                'menu_item_id' => 9,
+                'current_stock' => 100,
+                'minimum_stock' => 30,
+                'maximum_stock' => 200,
+                'unit' => 'gelas',
+                'cost_per_unit' => 2000,
+                'supplier' => 'Supplier Minuman',
+                'last_restocked_at' => now()->subHours(8),
+                'expiry_date' => now()->addDays(7),
+                'status' => 'active',
+            ],
+            [
+                'menu_item_id' => 10,
+                'current_stock' => 3,
+                'minimum_stock' => 10,
+                'maximum_stock' => 80,
+                'unit' => 'gelas',
+                'cost_per_unit' => 5000,
+                'supplier' => 'Supplier Jus Segar',
+                'last_restocked_at' => now()->subDays(5),
+                'expiry_date' => now()->addHours(12),
+                'status' => 'discontinued',
+            ],
+            [
+                'menu_item_id' => 11,
+                'current_stock' => 20,
+                'minimum_stock' => 8,
+                'maximum_stock' => 50,
+                'unit' => 'bowl',
+                'cost_per_unit' => 20000,
+                'supplier' => 'Supplier Healthy Food',
+                'last_restocked_at' => now()->subDays(1),
+                'expiry_date' => now()->addDays(3),
+                'status' => 'active',
+            ],
+            [
+                'menu_item_id' => 12,
+                'current_stock' => 35,
+                'minimum_stock' => 12,
+                'maximum_stock' => 80,
+                'unit' => 'porsi',
+                'cost_per_unit' => 14000,
+                'supplier' => 'Supplier Pecel Madiun',
+                'last_restocked_at' => now()->subDays(2),
+                'expiry_date' => now()->addDays(2),
+                'status' => 'active',
+            ],
+        ];
+
+        foreach ($inventories as $inventory) {
+            Inventory::create($inventory);
+        }
+    }
+}
