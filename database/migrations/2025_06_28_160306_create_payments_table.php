@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('gateway')->nullable(); // midtrans, xendit, etc
             $table->json('gateway_response')->nullable();
             $table->timestamp('paid_at')->nullable();
+            $table->timestamp('payment_date')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
 
@@ -30,7 +31,7 @@ return new class extends Migration
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('payments');
     }

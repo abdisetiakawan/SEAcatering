@@ -6,12 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('meal_plan_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_address_id')->nullable()->constrained('user_addresses')->onDelete('set null');
             $table->string('subscription_number')->unique();
             $table->date('start_date');
             $table->date('end_date')->nullable();
@@ -33,7 +34,7 @@ return new class extends Migration
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('subscriptions');
     }

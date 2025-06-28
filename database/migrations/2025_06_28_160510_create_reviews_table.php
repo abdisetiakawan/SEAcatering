@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::create('reviews', function (Blueprint $table) {
             $table->id();
@@ -19,6 +19,7 @@ return new class extends Migration
             $table->json('aspects')->nullable(); // taste, presentation, portion, etc
             $table->boolean('is_verified')->default(false);
             $table->boolean('is_featured')->default(false);
+            $table->boolean('is_published')->default(true);
             $table->timestamp('verified_at')->nullable();
             $table->timestamps();
 
@@ -30,7 +31,7 @@ return new class extends Migration
         DB::statement('ALTER TABLE reviews ADD CONSTRAINT check_rating CHECK (rating >= 1 AND rating <= 5)');
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('reviews');
     }
