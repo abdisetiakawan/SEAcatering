@@ -299,8 +299,14 @@ const reorderItems = () => {
 
     router.visit(route('cart.index'));
 };
+declare global {
+    interface Window {
+        invoiceUrl: string;
+    }
+}
 
 const downloadInvoice = () => {
-    window.open(`/orders/${props.order.id}/invoice`, '_blank');
+    const url = window.invoiceUrl.replace('__ORDER_ID__', String(props.order.id));
+    window.open(url, '_blank');
 };
 </script>

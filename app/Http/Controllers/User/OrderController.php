@@ -206,4 +206,22 @@ class OrderController extends Controller
 
         return back()->with('success', 'Order cancelled successfully!');
     }
+    public function invoice(Order $order)
+    {
+        // Ensure user can only view their own order invoices
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $order->load([
+            'orderItems.menuItem.category',
+            'deliveryAddress',
+            'payment',
+            'user'
+        ]);
+
+        return Inertia::render('User/Orders/Invoice', [
+            'order' => $order
+        ]);
+    }
 }
