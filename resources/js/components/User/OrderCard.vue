@@ -23,7 +23,7 @@
                         <img
                             v-for="(item, index) in order.order_items.slice(0, 3)"
                             :key="index"
-                            :src="item.menu_item.image || '/placeholder.svg?height=40&width=40'"
+                            :src="item.menu_item.image.startsWith('http') ? item.menu_item.image : '/storage/' + item.menu_item.image"
                             :alt="item.menu_item.name"
                             class="h-10 w-10 rounded-full border-2 border-white object-cover"
                         />
