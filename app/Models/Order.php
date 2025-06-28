@@ -11,7 +11,9 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+        'subscription_id',
         'order_number',
+        'order_type',
         'delivery_address_id',
         'delivery_date',
         'delivery_time_slot',
@@ -39,6 +41,11 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function subscription()
+    {
+        return $this->belongsTo(Subscription::class);
+    }
+
     public function deliveryAddress()
     {
         return $this->belongsTo(UserAddress::class, 'delivery_address_id');
@@ -59,6 +66,7 @@ class Order extends Model
         return $this->hasOne(Delivery::class);
     }
 
+    // Scopes
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
@@ -69,6 +77,17 @@ class Order extends Model
         return $query->whereDate('delivery_date', today());
     }
 
+    public function scopeSubscriptionOrders($query)
+    {
+        return $query->where('order_type', 'subscription');
+    }
+
+    public function scopeDirectOrders($query)
+    {
+        return $query->where('order_type', 'direct');
+    }
+
+    // Accessors
     public function getFormattedTotalAttribute()
     {
         return 'Rp ' . number_format($this->total_amount, 0, ',', '.');
@@ -77,6 +96,34 @@ class Order extends Model
     public function getCanBeCancelledAttribute()
     {
         return in_array($this->status, ['pending', 'confirmed']);
+    }
+
+    public function getIsSubscriptionOrderAttribute()
+    {
+        return $this->order_type === 'subscription';
+    }
+
+    public function getIsDirectOrderAttribute()
+    {
+        return $this->order_type === 'direct';
+    }
+
+    public function getCustomerNameAttribute()
+    {
+        return $this->user->name ?? 'Unknown Customer';
+    }
+
+    public function getCustomerEmailAttribute()
+    {
+        return $this->user->email ?? 'Unknown Email';
+    }
+
+    public function getOrderSourceAttribute()
+    {
+        if ($this->is_subscription_order && $this->subscription) {
+            return $this->subscription->mealPlan->name ?? 'Subscription Order';
+        }
+        return 'Direct Order';
     }
 
     protected static function boot()

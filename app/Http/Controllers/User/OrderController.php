@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\MenuItem;
 use App\Models\UserAddress;
+use App\Models\Cart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -16,59 +17,56 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Order::with(['orderItems.menuItem', 'deliveryAddress'])
-            ->where('user_id', auth()->id());
+        $user = auth()->user();
+
+        $query = Order::with(['orderItems.menuItem', 'delivery.driver', 'payment', 'deliveryAddress'])
+            ->where('user_id', $user->id);
 
         // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Search by order number or menu item name
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('order_number', 'like', "%{$search}%")
-                    ->orWhereHas('orderItems.menuItem', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%");
-                    });
+        // Filter by order type
+        if ($request->filled('order_type')) {
+            $query->where('order_type', $request->order_type);
+        }
+
+        $orders = $query->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->through(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'order_type' => $order->order_type,
+                    'order_source' => $order->order_source,
+                    'delivery_date' => $order->delivery_date,
+                    'delivery_time_slot' => $order->delivery_time_slot,
+                    'total_amount' => $order->total_amount,
+                    'status' => $order->status,
+                    'payment_status' => $order->payment_status,
+                    'can_be_cancelled' => $order->can_be_cancelled,
+                    'created_at' => $order->created_at,
+                    'items_count' => $order->orderItems->count(),
+                ];
             });
-        }
-
-        // Date range filter
-        if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->to_date);
-        }
-
-        $orders = $query->latest()->paginate(10)->withQueryString();
-
-        // Calculate stats
-        $stats = [
-            'pending' => Order::where('user_id', auth()->id())->where('status', 'pending')->count(),
-            'preparing' => Order::where('user_id', auth()->id())->whereIn('status', ['confirmed', 'preparing'])->count(),
-            'out_for_delivery' => Order::where('user_id', auth()->id())->where('status', 'out_for_delivery')->count(),
-            'delivered' => Order::where('user_id', auth()->id())->where('status', 'delivered')->count(),
-        ];
-
-        $orderStatuses = [
-            'pending' => 'Pending',
-            'confirmed' => 'Confirmed',
-            'preparing' => 'Preparing',
-            'ready' => 'Ready',
-            'out_for_delivery' => 'Out for Delivery',
-            'delivered' => 'Delivered',
-            'cancelled' => 'Cancelled'
-        ];
-        \Illuminate\Support\Facades\Log::info($orders);
 
         return Inertia::render('User/Orders/Index', [
             'orders' => $orders,
-            'stats' => $stats,
-            'orderStatuses' => $orderStatuses,
-            'filters' => $request->only(['status', 'search', 'from_date', 'to_date'])
+            'filters' => $request->only(['status', 'order_type']),
+            'statusOptions' => [
+                'pending' => 'Pending',
+                'confirmed' => 'Confirmed',
+                'preparing' => 'Preparing',
+                'ready' => 'Ready',
+                'out_for_delivery' => 'Out for Delivery',
+                'delivered' => 'Delivered',
+                'cancelled' => 'Cancelled'
+            ],
+            'orderTypeOptions' => [
+                'direct' => 'Direct Order',
+                'subscription' => 'Subscription Order'
+            ]
         ]);
     }
 
@@ -80,14 +78,42 @@ class OrderController extends Controller
         }
 
         $order->load([
-            'orderItems.menuItem.category',
-            'deliveryAddress',
+            'orderItems.menuItem',
+            'delivery.driver',
             'payment',
-            'delivery.driver'
+            'deliveryAddress'
         ]);
 
         return Inertia::render('User/Orders/Show', [
-            'order' => $order
+            'order' => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'order_type' => $order->order_type,
+                'order_source' => $order->order_source,
+                'delivery_date' => $order->delivery_date,
+                'delivery_time_slot' => $order->delivery_time_slot,
+                'subtotal' => $order->subtotal,
+                'tax_amount' => $order->tax_amount,
+                'delivery_fee' => $order->delivery_fee,
+                'total_amount' => $order->total_amount,
+                'special_instructions' => $order->special_instructions,
+                'status' => $order->status,
+                'payment_status' => $order->payment_status,
+                'can_be_cancelled' => $order->can_be_cancelled,
+                'created_at' => $order->created_at,
+                'delivery_address' => $order->deliveryAddress,
+                'order_items' => $order->orderItems->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'menu_item' => $item->menuItem,
+                        'quantity' => $item->quantity,
+                        'price' => $item->price,
+                        'total_price' => $item->total_price,
+                    ];
+                }),
+                'payment' => $order->payment,
+                'delivery' => $order->delivery,
+            ]
         ]);
     }
 
@@ -194,9 +220,9 @@ class OrderController extends Controller
             abort(403);
         }
 
-        // Only allow cancellation for pending or confirmed orders
-        if (!in_array($order->status, ['pending', 'confirmed'])) {
-            return back()->withErrors(['message' => 'This order cannot be cancelled.']);
+        if (!$order->can_be_cancelled) {
+            return redirect()->back()
+                ->with('error', 'Order tidak dapat dibatalkan');
         }
 
         $order->update([
@@ -204,8 +230,36 @@ class OrderController extends Controller
             'cancelled_at' => now()
         ]);
 
-        return back()->with('success', 'Order cancelled successfully!');
+        return redirect()->back()
+            ->with('success', 'Order berhasil dibatalkan');
     }
+
+    public function reorder(Order $order)
+    {
+        // Ensure user can only reorder their own orders
+        if ($order->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        // Add order items to cart
+        foreach ($order->orderItems as $item) {
+            Cart::updateOrCreate(
+                [
+                    'user_id' => auth()->id(),
+                    'menu_item_id' => $item->menu_item_id,
+                ],
+                [
+                    'quantity' => $item->quantity,
+                    'price' => $item->menuItem->price, // Use current price
+                    'subtotal' => $item->quantity * $item->menuItem->price,
+                ]
+            );
+        }
+
+        return redirect()->route('user.cart.index')
+            ->with('success', 'Items berhasil ditambahkan ke keranjang');
+    }
+
     public function invoice(Order $order)
     {
         // Ensure user can only view their own order invoices
@@ -214,14 +268,41 @@ class OrderController extends Controller
         }
 
         $order->load([
-            'orderItems.menuItem.category',
+            'orderItems.menuItem',
             'deliveryAddress',
-            'payment',
-            'user'
+            'payment'
         ]);
 
         return Inertia::render('User/Orders/Invoice', [
-            'order' => $order
+            'order' => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'order_type' => $order->order_type,
+                'order_source' => $order->order_source,
+                'delivery_date' => $order->delivery_date,
+                'delivery_time_slot' => $order->delivery_time_slot,
+                'subtotal' => $order->subtotal,
+                'tax_amount' => $order->tax_amount,
+                'delivery_fee' => $order->delivery_fee,
+                'total_amount' => $order->total_amount,
+                'special_instructions' => $order->special_instructions,
+                'status' => $order->status,
+                'payment_status' => $order->payment_status,
+                'created_at' => $order->created_at,
+                'customer_name' => $order->customer_name,
+                'customer_email' => $order->customer_email,
+                'delivery_address' => $order->deliveryAddress,
+                'order_items' => $order->orderItems->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'menu_item' => $item->menuItem,
+                        'quantity' => $item->quantity,
+                        'price' => $item->price,
+                        'total_price' => $item->total_price,
+                    ];
+                }),
+                'payment' => $order->payment,
+            ]
         ]);
     }
 }

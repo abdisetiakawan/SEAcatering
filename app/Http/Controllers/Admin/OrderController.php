@@ -13,12 +13,12 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Order::with(['subscription.user', 'subscription.mealPlan', 'orderItems.menuItem', 'delivery.driver']);
+        $query = Order::with(['user', 'subscription.user', 'subscription.mealPlan', 'orderItems.menuItem', 'delivery.driver']);
 
         // Search
         if ($request->filled('search')) {
             $query->where('order_number', 'like', '%' . $request->search . '%')
-                ->orWhereHas('subscription.user', function ($q) use ($request) {
+                ->orWhereHas('user', function ($q) use ($request) {
                     $q->where('name', 'like', '%' . $request->search . '%')
                         ->orWhere('email', 'like', '%' . $request->search . '%');
                 });
@@ -27,6 +27,11 @@ class OrderController extends Controller
         // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+
+        // Filter by order type
+        if ($request->filled('order_type')) {
+            $query->where('order_type', $request->order_type);
         }
 
         // Filter by delivery date
@@ -44,7 +49,23 @@ class OrderController extends Controller
 
         $orders = $query->orderBy('delivery_date', 'desc')
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate(15)
+            ->through(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'order_type' => $order->order_type,
+                    'customer_name' => $order->customer_name,
+                    'customer_email' => $order->customer_email,
+                    'order_source' => $order->order_source,
+                    'delivery_date' => $order->delivery_date,
+                    'delivery_time_slot' => $order->delivery_time_slot,
+                    'total_amount' => $order->total_amount,
+                    'status' => $order->status,
+                    'payment_status' => $order->payment_status,
+                    'created_at' => $order->created_at,
+                ];
+            });
 
         $stats = [
             'total_orders' => Order::count(),
@@ -53,11 +74,13 @@ class OrderController extends Controller
             'ready_orders' => Order::where('status', 'ready')->count(),
             'delivered_orders' => Order::where('status', 'delivered')->count(),
             'today_orders' => Order::whereDate('delivery_date', today())->count(),
+            'subscription_orders' => Order::where('order_type', 'subscription')->count(),
+            'direct_orders' => Order::where('order_type', 'direct')->count(),
         ];
 
         return Inertia::render('Admin/OrderManagement', [
             'orders' => $orders,
-            'filters' => $request->only(['search', 'status', 'delivery_date', 'date_from', 'date_to']),
+            'filters' => $request->only(['search', 'status', 'order_type', 'delivery_date', 'date_from', 'date_to']),
             'stats' => $stats,
             'statusOptions' => [
                 'pending' => 'Pending',
@@ -67,6 +90,10 @@ class OrderController extends Controller
                 'out_for_delivery' => 'Out for Delivery',
                 'delivered' => 'Delivered',
                 'cancelled' => 'Cancelled'
+            ],
+            'orderTypeOptions' => [
+                'direct' => 'Direct Order',
+                'subscription' => 'Subscription Order'
             ]
         ]);
     }
@@ -74,15 +101,46 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $order->load([
+            'user',
             'subscription.user',
             'subscription.mealPlan',
             'orderItems.menuItem',
             'delivery.driver',
-            'payment'
+            'payment',
+            'deliveryAddress'
         ]);
 
         return Inertia::render('Admin/OrderDetail', [
-            'order' => $order
+            'order' => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'order_type' => $order->order_type,
+                'customer_name' => $order->customer_name,
+                'customer_email' => $order->customer_email,
+                'order_source' => $order->order_source,
+                'delivery_date' => $order->delivery_date,
+                'delivery_time_slot' => $order->delivery_time_slot,
+                'subtotal' => $order->subtotal,
+                'tax_amount' => $order->tax_amount,
+                'delivery_fee' => $order->delivery_fee,
+                'total_amount' => $order->total_amount,
+                'special_instructions' => $order->special_instructions,
+                'status' => $order->status,
+                'payment_status' => $order->payment_status,
+                'created_at' => $order->created_at,
+                'delivery_address' => $order->deliveryAddress,
+                'order_items' => $order->orderItems->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'menu_item' => $item->menuItem,
+                        'quantity' => $item->quantity,
+                        'price' => $item->price,
+                        'total_price' => $item->total_price,
+                    ];
+                }),
+                'payment' => $order->payment,
+                'delivery' => $order->delivery,
+            ]
         ]);
     }
 
