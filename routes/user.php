@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\User\AddressController;
 use App\Http\Controllers\User\CartController;
+use App\Http\Controllers\User\CheckoutController;
 use App\Http\Controllers\User\DashboardController;
 use App\Http\Controllers\User\MealPlanController;
 use App\Http\Controllers\User\MenuController;
@@ -42,9 +43,9 @@ Route::middleware(['auth', 'verified'])->prefix('user')->name('user.')->group(fu
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/{order}', [OrderController::class, 'show'])->name('show');
-        Route::post('/', [OrderController::class, 'store'])->name('store');
         Route::patch('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
         Route::post('/{order}/reorder', [OrderController::class, 'reorder'])->name('reorder');
+        Route::get('/{order}/invoice', [OrderController::class, 'invoice'])->name('invoice');
     });
 
     // Subscriptions
@@ -55,6 +56,13 @@ Route::middleware(['auth', 'verified'])->prefix('user')->name('user.')->group(fu
         Route::patch('/{subscription}/resume', [SubscriptionController::class, 'resume'])->name('resume');
         Route::patch('/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
         Route::patch('/{subscription}/modify', [SubscriptionController::class, 'modify'])->name('modify');
+    });
+
+
+    // Checkout
+    Route::prefix('checkout')->name('checkout.')->group(function () {
+        Route::get('/', [CheckoutController::class, 'index'])->name('index');
+        Route::post('/', [CheckoutController::class, 'store'])->name('store');
     });
 
     // Addresses
