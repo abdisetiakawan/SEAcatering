@@ -3,104 +3,130 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\MenuItem;
+use App\Models\Cart;
 use App\Models\Category;
+use App\Models\MenuItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class MenuController extends Controller
 {
     public function index(Request $request)
     {
-        $query = MenuItem::with(['category', 'reviews'])
+        $query = MenuItem::query()
             ->where('is_available', true);
 
-        // Filter by category
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
-        }
-
-        // Search by name or description
+        // Search
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('description', 'like', '%' . $request->search . '%');
             });
         }
 
-        // Filter by price range
-        if ($request->filled('min_price')) {
-            $query->where('price', '>=', $request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $query->where('price', '<=', $request->max_price);
+        // Category filter
+        if ($request->filled('category') && $request->category !== 'all') {
+            $query->where('category', $request->category);
         }
 
-        // Sort options
-        $sortBy = $request->get('sort', 'name');
-        $sortOrder = $request->get('order', 'asc');
+        // Price range filter
+        if ($request->filled('price_range') && $request->price_range !== 'all') {
+            $priceRange = explode('-', $request->price_range);
+            if (count($priceRange) === 2) {
+                $query->whereBetween('price', [$priceRange[0], $priceRange[1]]);
+            } elseif (str_ends_with($request->price_range, '+')) {
+                $minPrice = str_replace('+', '', $request->price_range);
+                $query->where('price', '>=', $minPrice);
+            }
+        }
 
-        switch ($sortBy) {
-            case 'price':
-                $query->orderBy('price', $sortOrder);
+        // Sorting
+        switch ($request->get('sort', 'name')) {
+            case 'price_asc':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_desc':
+                $query->orderBy('price', 'desc');
                 break;
             case 'rating':
-                $query->withAvg('reviews', 'rating')
-                    ->orderBy('reviews_avg_rating', $sortOrder);
+                $query->orderByDesc('average_rating');
                 break;
-            case 'popularity':
+            case 'popular':
                 $query->withCount('orderItems')
-                    ->orderBy('order_items_count', $sortOrder);
+                    ->orderByDesc('order_items_count');
                 break;
             default:
-                $query->orderBy('name', $sortOrder);
+                $query->orderBy('name', 'asc');
         }
 
         $menuItems = $query->paginate(12)->withQueryString();
 
-        // Add average rating and review count to each item
+        // Add average rating and review count
         $menuItems->getCollection()->transform(function ($item) {
-            $item->average_rating = $item->reviews->avg('rating') ?? 0;
-            $item->review_count = $item->reviews->count();
+            $item->average_rating = $item->reviews()->avg('rating') ?? 0;
+            $item->review_count = $item->reviews()->count();
             return $item;
         });
 
-        $categories = Category::orderBy('name')->get();
+        // Get unique categories from menu_items for filter
+        $categories = MenuItem::whereNotNull('category')
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category')
+            ->map(function ($category, $index) {
+                return [
+                    'id' => $index + 1,
+                    'name' => $category,
+                ];
+            })
+            ->values();
+
+        // Get stats
+        $stats = [
+            'total_menu_items' => MenuItem::where('is_available', true)->count(),
+            'categories_count' => $categories->count(),
+            'average_rating' => MenuItem::join('reviews', 'menu_items.id', '=', 'reviews.menu_item_id')
+                ->avg('reviews.rating') ?? 0,
+            'popular_items' => MenuItem::whereExists(function ($query) {
+                $query->select(DB::raw('1'))
+                    ->from('order_items')
+                    ->whereColumn('menu_items.id', 'order_items.menu_item_id')
+                    ->groupBy('menu_item_id')
+                    ->havingRaw('COUNT(*) > 10');
+            })->count(),
+        ];
+
+        $cartItemsCount = Cart::where('user_id', auth()->id())->count();
+
 
         return Inertia::render('User/Menu/Index', [
             'menuItems' => $menuItems,
             'categories' => $categories,
-            'filters' => $request->only(['category', 'search', 'min_price', 'max_price', 'sort', 'order'])
+            'stats' => $stats,
+            'filters' => $request->only(['search', 'category', 'price_range', 'sort']),
+            'cartItemsCount' => $cartItemsCount,
         ]);
     }
 
     public function show(MenuItem $menuItem)
     {
-        $menuItem->load([
-            'category',
-            'reviews' => function ($query) {
-                $query->where('is_published', true)
-                    ->with('user')
-                    ->latest();
-            }
-        ]);
+        $menuItem->load(['category', 'reviews.user']);
 
-        // Calculate average rating and review count
-        $menuItem->average_rating = $menuItem->reviews->avg('rating') ?? 0;
-        $menuItem->review_count = $menuItem->reviews->count();
+        // Calculate average rating
+        $menuItem->average_rating = $menuItem->reviews()->avg('rating') ?? 0;
+        $menuItem->review_count = $menuItem->reviews()->count();
 
-        // Get related menu items from same category
+        // Get related items
         $relatedItems = MenuItem::where('category_id', $menuItem->category_id)
             ->where('id', '!=', $menuItem->id)
             ->where('is_available', true)
-            ->with('category')
             ->limit(4)
             ->get();
 
         return Inertia::render('User/Menu/Show', [
             'menuItem' => $menuItem,
-            'relatedItems' => $relatedItems
+            'relatedItems' => $relatedItems,
         ]);
     }
 }
