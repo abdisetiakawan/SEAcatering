@@ -208,7 +208,7 @@ class DashboardController extends Controller
 
     private function getRecentOrders()
     {
-        return Order::with(['subscription.user', 'subscription.mealPlan'])
+        $orders = Order::with(['subscription.user', 'subscription.mealPlan'])
             ->latest()
             ->take(8)
             ->get()
@@ -216,14 +216,14 @@ class DashboardController extends Controller
                 return [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
-                    'customer' => $order->subscription->user->name,
-                    'customer_email' => $order->subscription->user->email,
-                    'plan' => $order->subscription->mealPlan->name,
-                    'delivery_date' => $order->delivery_date->format('d M Y'),
-                    'delivery_time' => $order->delivery_time_slot,
-                    'total_amount' => $order->total_amount,
-                    'status' => $order->status,
-                    'created_at' => $order->created_at->diffForHumans(),
+                    'customer' => $order->subscription?->user?->name ?? '-',
+                    'customer_email' => $order->subscription?->user?->email ?? '-',
+                    'plan' => $order->subscription?->mealPlan?->name ?? '-',
+                    'delivery_date' => optional($order->delivery_date)->format('d M Y') ?? '-',
+                    'delivery_time' => $order->delivery_time_slot ?? '-',
+                    'total_amount' => $order->total_amount ?? 0,
+                    'status' => $order->status ?? '-',
+                    'created_at' => optional($order->created_at)->diffForHumans() ?? '-',
                 ];
             });
     }
@@ -402,11 +402,13 @@ class DashboardController extends Controller
             ->get();
 
         foreach ($recentOrders as $order) {
+            $customerName = $order->subscription?->user?->name ?? $order->user?->name ?? 'Unknown Customer';
+
             $activities->push([
                 'id' => 'order_' . $order->id,
                 'type' => 'order',
                 'title' => 'New Order Received',
-                'description' => "Order #{$order->order_number} from {$order->subscription->user->name}",
+                'description' => "Order #{$order->order_number} from {$customerName}",
                 'amount' => $order->total_amount,
                 'time' => $order->created_at->diffForHumans(),
                 'timestamp' => $order->created_at,
