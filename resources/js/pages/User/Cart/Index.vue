@@ -134,11 +134,11 @@
                                             </div>
                                         </div>
 
-                                        <!-- Promo Code -->
-                                        <div class="border-t pt-4">
+                                        <!-- Promo Code (Coming Soon) -->
+                                        <div class="border-t pt-4 opacity-50">
                                             <div class="flex space-x-2">
-                                                <Input v-model="promoCode" placeholder="Enter promo code" class="flex-1" />
-                                                <Button @click="applyPromoCode" variant="outline" size="sm"> Apply </Button>
+                                                <Input v-model="promoCode" placeholder="Enter promo code" class="flex-1" disabled />
+                                                <Button variant="outline" size="sm" disabled> Coming Soon </Button>
                                             </div>
                                         </div>
 
