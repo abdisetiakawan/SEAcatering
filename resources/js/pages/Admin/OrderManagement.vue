@@ -183,7 +183,7 @@ import { Eye, RefreshCw, Search } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
 
 type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
-type OrderType = 'direct' | 'subscription';
+type OrderType = 'one_time' | 'subscription';
 
 interface Order {
     id: number;
