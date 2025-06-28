@@ -11,79 +11,89 @@ class MealPlanController extends Controller
 {
     public function index(Request $request)
     {
-        $query = MealPlan::with(['menuItems.category'])
+        $query = MealPlan::with(['menuItems'])
             ->where('is_active', true);
 
-        // Filter by plan type
-        if ($request->filled('plan_type')) {
+        // Plan type filter
+        if ($request->filled('plan_type') && $request->plan_type !== 'all') {
             $query->where('plan_type', $request->plan_type);
         }
 
-        // Filter by price range
-        if ($request->filled('min_price')) {
-            $query->where('price_per_meal', '>=', $request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $query->where('price_per_meal', '<=', $request->max_price);
-        }
-
-        // Filter by calories
-        if ($request->filled('max_calories')) {
-            $query->where('target_calories', '<=', $request->max_calories);
+        // Price range filter
+        if ($request->filled('price_range') && $request->price_range !== 'all') {
+            $priceRange = explode('-', $request->price_range);
+            if (count($priceRange) === 2) {
+                $query->whereBetween('price_per_meal', [$priceRange[0], $priceRange[1]]);
+            } elseif (str_ends_with($request->price_range, '+')) {
+                $minPrice = str_replace('+', '', $request->price_range);
+                $query->where('price_per_meal', '>=', $minPrice);
+            }
         }
 
-        // Sort options
-        $sortBy = $request->get('sort', 'name');
-        $sortOrder = $request->get('order', 'asc');
-
-        switch ($sortBy) {
-            case 'price':
-                $query->orderBy('price_per_meal', $sortOrder);
-                break;
-            case 'calories':
-                $query->orderBy('target_calories', $sortOrder);
-                break;
-            default:
-                $query->orderBy('name', $sortOrder);
+        // Calories filter
+        if ($request->filled('calories') && $request->calories !== 'all') {
+            $caloriesRange = explode('-', $request->calories);
+            if (count($caloriesRange) === 2) {
+                $query->whereBetween('target_calories', [$caloriesRange[0], $caloriesRange[1]]);
+            } elseif (str_ends_with($request->calories, '+')) {
+                $minCalories = str_replace('+', '', $request->calories);
+                $query->where('target_calories', '>=', $minCalories);
+            }
         }
 
-        $mealPlans = $query->paginate(9)->withQueryString();
+        $mealPlans = $query->withCount(['subscriptions', 'menuItems'])
+            ->orderBy('name')
+            ->paginate(9)
+            ->withQueryString();
 
-        // Get unique plan types for filter
-        $planTypes = MealPlan::where('is_active', true)
-            ->distinct()
-            ->pluck('plan_type')
-            ->map(function ($type) {
-                return [
-                    'value' => $type,
-                    'label' => ucfirst($type)
-                ];
-            });
+        // Transform data
+        $mealPlans->getCollection()->transform(function ($plan) {
+            $plan->subscribers_count = $plan->subscriptions_count;
+            $plan->menu_items_count = $plan->menu_items_count;
+            $plan->features = $plan->features ?? [];
+            return $plan;
+        });
+
+        // Get plan types for filter
+        $planTypes = [
+            ['value' => 'diet', 'label' => 'Diet Plan'],
+            ['value' => 'protein', 'label' => 'Protein Plan'],
+            ['value' => 'royal', 'label' => 'Royal Plan'],
+            ['value' => 'vegetarian', 'label' => 'Vegetarian'],
+            ['value' => 'seafood', 'label' => 'Seafood'],
+        ];
+
+        // Calculate stats
+        $stats = [
+            'total_plans' => MealPlan::where('is_active', true)->count(),
+            'active_subscribers' => \App\Models\Subscription::where('status', 'active')->count(),
+            'starting_price' => MealPlan::where('is_active', true)->min('price_per_meal') ?? 0,
+            'avg_rating' => 4.5, // This would come from reviews
+        ];
 
         return Inertia::render('User/MealPlans/Index', [
             'mealPlans' => $mealPlans,
             'planTypes' => $planTypes,
-            'filters' => $request->only(['plan_type', 'min_price', 'max_price', 'max_calories', 'sort', 'order'])
+            'stats' => $stats,
+            'filters' => $request->only(['plan_type', 'price_range', 'calories']),
         ]);
     }
 
     public function show(MealPlan $mealPlan)
     {
-        $mealPlan->load([
-            'menuItems.category',
-            'subscriptions' => function ($query) {
-                $query->where('user_id', auth()->id());
-            }
-        ]);
+        $mealPlan->load(['menuItems.category']);
 
-        // Check if user has active subscription to this plan
-        $hasActiveSubscription = $mealPlan->subscriptions
-            ->where('status', 'active')
-            ->isNotEmpty();
+        // Add additional data
+        $mealPlan->menu_items_count = $mealPlan->menuItems()->count();
+        $mealPlan->subscribers_count = $mealPlan->subscriptions()->where('status', 'active')->count();
+        $mealPlan->features = json_decode($mealPlan->features ?? '[]', true);
+
+        // Get user addresses for subscription
+        $userAddresses = auth()->user()->addresses ?? [];
 
         return Inertia::render('User/MealPlans/Show', [
             'mealPlan' => $mealPlan,
-            'hasActiveSubscription' => $hasActiveSubscription
+            'userAddresses' => $userAddresses,
         ]);
     }
 }
