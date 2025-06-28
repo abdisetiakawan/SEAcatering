@@ -5,7 +5,11 @@
             <div class="mb-4 flex items-start justify-between">
                 <div class="flex items-center space-x-4">
                     <img
-                        :src="subscription.meal_plan.image || '/placeholder.svg?height=60&width=60'"
+                        :src="
+                            subscription.meal_plan.image.startsWith('http')
+                                ? subscription.meal_plan.image
+                                : '/storage/' + subscription.meal_plan.image
+                        "
                         :alt="subscription.meal_plan.name"
                         class="h-15 w-15 rounded-lg object-cover"
                     />
