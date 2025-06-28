@@ -1,6 +1,6 @@
 import { onMounted, ref } from 'vue';
 
-type Appearance = 'light' | 'dark' | 'system';
+type Appearance = 'light' | 'system';
 
 export function updateTheme(value: Appearance) {
     if (typeof window === 'undefined') {
@@ -11,9 +11,11 @@ export function updateTheme(value: Appearance) {
         const mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
         const systemTheme = mediaQueryList.matches ? 'dark' : 'light';
 
-        document.documentElement.classList.toggle('dark', systemTheme === 'dark');
+        // Force light theme even if system prefers dark
+        document.documentElement.classList.remove('dark');
     } else {
-        document.documentElement.classList.toggle('dark', value === 'dark');
+        // Only allow light theme
+        document.documentElement.classList.remove('dark');
     }
 }
 
@@ -54,6 +56,9 @@ export function initializeTheme() {
         return;
     }
 
+    // Force light theme on initialization
+    document.documentElement.classList.remove('dark');
+
     // Initialize theme from saved preference or default to system...
     const savedAppearance = getStoredAppearance();
     updateTheme(savedAppearance || 'system');
@@ -62,18 +67,28 @@ export function initializeTheme() {
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
 
-const appearance = ref<Appearance>('system');
+const appearance = ref<Appearance>('light'); // Default to light
 
 export function useAppearance() {
     onMounted(() => {
         const savedAppearance = localStorage.getItem('appearance') as Appearance | null;
 
-        if (savedAppearance) {
+        if (savedAppearance && savedAppearance !== 'dark') {
             appearance.value = savedAppearance;
+        } else {
+            // If saved preference was dark, reset to light
+            appearance.value = 'light';
+            localStorage.setItem('appearance', 'light');
+            setCookie('appearance', 'light');
         }
     });
 
     function updateAppearance(value: Appearance) {
+        // Filter out any dark mode attempts
+        if (value === 'dark') {
+            value = 'light';
+        }
+
         appearance.value = value;
 
         // Store in localStorage for client-side persistence...
