@@ -21,6 +21,7 @@ return new class extends Migration
                 'failed',
                 'returned'
             ])->default('assigned');
+            $table->foreignId('delivery_address_id')->nullable()->constrained('user_addresses')->onDelete('set null');
             $table->timestamp('picked_up_at')->nullable();
             $table->timestamp('delivered_at')->nullable();
             $table->text('delivery_notes')->nullable();
