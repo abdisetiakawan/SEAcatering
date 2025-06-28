@@ -17,7 +17,7 @@
                 </div>
 
                 <!-- Stats Cards -->
-                <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
+                <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4 lg:grid-cols-8">
                     <div class="rounded-lg bg-white p-4 shadow-sm">
                         <div class="text-2xl font-bold text-blue-600">{{ stats.total_orders }}</div>
                         <div class="text-sm text-gray-600">Total Orders</div>
@@ -42,22 +42,44 @@
                         <div class="text-2xl font-bold text-indigo-600">{{ stats.today_orders }}</div>
                         <div class="text-sm text-gray-600">Today</div>
                     </div>
+                    <div class="rounded-lg bg-white p-4 shadow-sm">
+                        <div class="text-2xl font-bold text-cyan-600">{{ stats.subscription_orders }}</div>
+                        <div class="text-sm text-gray-600">Subscription</div>
+                    </div>
+                    <div class="rounded-lg bg-white p-4 shadow-sm">
+                        <div class="text-2xl font-bold text-pink-600">{{ stats.direct_orders }}</div>
+                        <div class="text-sm text-gray-600">Direct</div>
+                    </div>
                 </div>
 
                 <!-- Filters -->
                 <div class="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg">
                     <div class="p-6">
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-6">
                             <div class="relative">
                                 <Search class="absolute top-3 left-3 h-4 w-4 text-gray-400" />
                                 <Input v-model="filters.search" placeholder="Cari order..." class="pl-10" @input="handleSearch" />
                             </div>
-                            <Select :model-value="filters.status" @update:model-value="handleFilter">
-                                <SelectTrigger class="w-[200px]">
+
+                            <Select :model-value="filters.status" @update:model-value="updateFilter('status', $event)">
+                                <SelectTrigger>
                                     <SelectValue placeholder="Pilih Status" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="all">Semua Status</SelectItem>
                                     <SelectItem v-for="(label, value) in statusOptions" :key="value" :value="value">
+                                        {{ label }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            <Select :model-value="filters.order_type" @update:model-value="updateFilter('order_type', $event)">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Tipe Order" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Tipe</SelectItem>
+                                    <SelectItem v-for="(label, value) in orderTypeOptions" :key="value" :value="value">
                                         {{ label }}
                                     </SelectItem>
                                 </SelectContent>
@@ -81,6 +103,7 @@
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Order</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Source</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Delivery Date</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Status</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Total</th>
@@ -91,11 +114,18 @@
                                 <tr v-for="order in orders.data" :key="order.id">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">{{ order.order_number }}</div>
-                                        <div class="text-sm text-gray-500">{{ order.subscription.meal_plan.name }}</div>
+                                        <div class="flex items-center space-x-2">
+                                            <Badge :variant="order.order_type === 'subscription' ? 'default' : 'secondary'" class="text-xs">
+                                                {{ orderTypeOptions[order.order_type] }}
+                                            </Badge>
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">{{ order.subscription.user.name }}</div>
-                                        <div class="text-sm text-gray-500">{{ order.subscription.user.email }}</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ order.customer_name }}</div>
+                                        <div class="text-sm text-gray-500">{{ order.customer_email }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">{{ order.order_source }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                                         {{ formatDate(order.delivery_date) }}
@@ -152,25 +182,23 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Eye, RefreshCw, Search } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
-type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivering' | 'delivered' | 'cancelled';
+
+type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
+type OrderType = 'direct' | 'subscription';
 
 interface Order {
     id: number;
     order_number: string;
+    order_type: OrderType;
+    customer_name: string;
+    customer_email: string;
+    order_source: string;
     delivery_date: string;
     delivery_time_slot: string;
     total_amount: number;
     status: OrderStatus;
+    payment_status: string;
     created_at: string;
-    subscription: {
-        user: {
-            name: string;
-            email: string;
-        };
-        meal_plan: {
-            name: string;
-        };
-    };
 }
 
 const props = defineProps<{
@@ -178,11 +206,28 @@ const props = defineProps<{
     filters: Record<string, any>;
     stats: Record<string, number>;
     statusOptions: Record<string, string>;
+    orderTypeOptions: Record<string, string>;
 }>();
 
 // State
 const showStatusModal = ref(false);
 const selectedOrder = ref<Order | undefined>(undefined);
+
+interface Filters {
+    search: string;
+    status: string;
+    order_type: string;
+    delivery_date: string;
+    date_from: string;
+}
+
+const filters = reactive<Filters>({
+    search: props.filters.search || '',
+    status: props.filters.status || 'all',
+    order_type: props.filters.order_type || 'all',
+    delivery_date: props.filters.delivery_date || '',
+    date_from: props.filters.date_from || '',
+});
 
 // Methods
 const openStatusModal = (order: Order) => {
@@ -200,6 +245,9 @@ const getStatusVariant = (status: string): 'default' | 'destructive' | 'outline'
     const variants: Record<string, 'default' | 'destructive' | 'outline' | 'secondary'> = {
         pending: 'secondary',
         confirmed: 'default',
+        preparing: 'outline',
+        ready: 'default',
+        out_for_delivery: 'default',
         delivered: 'default',
         cancelled: 'destructive',
     };
@@ -227,22 +275,15 @@ const handleFilter = () => {
         replace: true,
     });
 };
-interface Filters {
-    search: string;
-    status: string;
-    delivery_date: string;
-    date_from: string;
-}
 
-const filters = reactive<Filters>({
-    search: props.filters.search || '',
-    status: props.filters.status || '',
-    delivery_date: props.filters.delivery_date || '',
-    date_from: props.filters.date_from || '',
-});
+const updateFilter = (key: keyof Filters, value: string) => {
+    filters[key] = value;
+    handleFilter();
+};
+
 const resetFilters = () => {
     (Object.keys(filters) as (keyof Filters)[]).forEach((key) => {
-        filters[key] = '';
+        filters[key] = key === 'status' || key === 'order_type' ? 'all' : '';
     });
     router.get(route('admin.orders.index'));
 };
