@@ -17,7 +17,6 @@ class CartSeeder extends Seeder
                 'quantity' => 1,
                 'unit_price' => 38000,
                 'total_price' => 38000,
-                'special_instructions' => 'Tidak terlalu pedas',
             ],
             [
                 'user_id' => 2,
@@ -25,7 +24,6 @@ class CartSeeder extends Seeder
                 'quantity' => 2,
                 'unit_price' => 5000,
                 'total_price' => 10000,
-                'special_instructions' => null,
             ],
 
             // User 3 cart items
@@ -35,7 +33,6 @@ class CartSeeder extends Seeder
                 'quantity' => 1,
                 'unit_price' => 35000,
                 'total_price' => 35000,
-                'special_instructions' => 'Extra sambal matah',
             ],
             [
                 'user_id' => 3,
@@ -43,7 +40,6 @@ class CartSeeder extends Seeder
                 'quantity' => 3,
                 'unit_price' => 10000,
                 'total_price' => 30000,
-                'special_instructions' => null,
             ],
 
             // User 4 cart items
@@ -53,7 +49,6 @@ class CartSeeder extends Seeder
                 'quantity' => 2,
                 'unit_price' => 28000,
                 'total_price' => 56000,
-                'special_instructions' => 'Dressing terpisah',
             ],
 
             // User 5 cart items
@@ -63,7 +58,6 @@ class CartSeeder extends Seeder
                 'quantity' => 1,
                 'unit_price' => 18000,
                 'total_price' => 18000,
-                'special_instructions' => 'Extra bumbu kacang',
             ],
             [
                 'user_id' => 5,
@@ -71,7 +65,6 @@ class CartSeeder extends Seeder
                 'quantity' => 1,
                 'unit_price' => 20000,
                 'total_price' => 20000,
-                'special_instructions' => null,
             ],
             [
                 'user_id' => 5,
@@ -79,7 +72,6 @@ class CartSeeder extends Seeder
                 'quantity' => 1,
                 'unit_price' => 8000,
                 'total_price' => 8000,
-                'special_instructions' => null,
             ],
         ];
 

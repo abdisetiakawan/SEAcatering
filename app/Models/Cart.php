@@ -11,72 +11,91 @@ class Cart extends Model
     use HasFactory;
 
     protected $fillable = [
-    'user_id',
+        'user_id',
         'menu_item_id',
         'quantity',
-        'price',
+        'unit_price',
+        'total_price',
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'quantity' => 'integer',
+        'unit_price' => 'decimal:2',
+        'total_price' => 'decimal:2',
     ];
 
-    /**
-     * Get the user that owns the cart item.
-     */
+    // Relationships
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the menu item for this cart item.
-     */
     public function menuItem(): BelongsTo
     {
         return $this->belongsTo(MenuItem::class);
     }
 
-    /**
-     * Get the subtotal for this cart item.
-     */
-    public function getSubtotalAttribute(): float
-    {
-        return $this->price * $this->quantity;
-    }
-
-    /**
-     * Get the total calories for this cart item.
-     */
-    public function getTotalCaloriesAttribute(): int
-    {
-        return $this->menuItem->calories * $this->quantity;
-    }
-
-    /**
-     * Get the total protein for this cart item.
-     */
-    public function getTotalProteinAttribute(): float
-    {
-        return $this->menuItem->protein * $this->quantity;
-    }
-
-    /**
-     * Scope to get cart items for a specific user.
-     */
+    // Scopes
     public function scopeForUser($query, $userId)
     {
         return $query->where('user_id', $userId);
     }
 
-    /**
-     * Get cart items with menu item details.
-     */
     public function scopeWithMenuItems($query)
     {
-        return $query->with(['menuItem' => function ($query) {
-            $query->select('id', 'name', 'description', 'image', 'category', 'calories', 'protein', 'carbs', 'fat', 'is_available');
-        }]);
+        return $query->with('menuItem');
+    }
+
+    // Accessors
+    public function getSubtotalAttribute()
+    {
+        return $this->total_price;
+    }
+
+    public function getTotalCaloriesAttribute()
+    {
+        return $this->menuItem ? $this->menuItem->calories * $this->quantity : 0;
+    }
+
+    public function getTotalProteinAttribute()
+    {
+        return $this->menuItem ? $this->menuItem->protein * $this->quantity : 0;
+    }
+
+    // Mutators
+    public function setQuantityAttribute($value)
+    {
+        $this->attributes['quantity'] = $value;
+        $this->updateTotalPrice();
+    }
+
+    public function setUnitPriceAttribute($value)
+    {
+        $this->attributes['unit_price'] = $value;
+        $this->updateTotalPrice();
+    }
+
+    private function updateTotalPrice()
+    {
+        if (isset($this->attributes['quantity']) && isset($this->attributes['unit_price'])) {
+            $this->attributes['total_price'] = $this->attributes['quantity'] * $this->attributes['unit_price'];
+        }
+    }
+
+    // Boot method to handle model events
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($cart) {
+            if (!$cart->total_price) {
+                $cart->total_price = $cart->quantity * $cart->unit_price;
+            }
+        });
+
+        static::updating(function ($cart) {
+            if ($cart->isDirty(['quantity', 'unit_price'])) {
+                $cart->total_price = $cart->quantity * $cart->unit_price;
+            }
+        });
     }
 }

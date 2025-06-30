@@ -25,7 +25,8 @@ class CartController extends Controller
                     'id' => $cartItem->id,
                     'menu_item_id' => $cartItem->menu_item_id,
                     'quantity' => $cartItem->quantity,
-                    'price' => $cartItem->price,
+                    'unit_price' => $cartItem->unit_price,
+                    'total_price' => $cartItem->total_price,
                     'subtotal' => $cartItem->subtotal,
                     'total_calories' => $cartItem->total_calories,
                     'total_protein' => $cartItem->total_protein,
@@ -36,6 +37,7 @@ class CartController extends Controller
                         'description' => $cartItem->menuItem->description,
                         'image' => $cartItem->menuItem->image,
                         'category' => $cartItem->menuItem->category,
+                        'price' => $cartItem->menuItem->price,
                         'calories' => $cartItem->menuItem->calories,
                         'protein' => $cartItem->menuItem->protein,
                         'carbs' => $cartItem->menuItem->carbs,
@@ -79,10 +81,10 @@ class CartController extends Controller
 
             if ($cartItem) {
                 // Update existing cart item
-                $newQuantity = $cartItem->quantity + $request->quantity;
+                $newQuantity = min($cartItem->quantity + $request->quantity, 10); // Max 10 items
                 $cartItem->update([
-                    'quantity' => min($newQuantity, 10), // Max 10 items
-                    'price' => $menuItem->price, // Update price in case it changed
+                    'quantity' => $newQuantity,
+                    'unit_price' => $menuItem->price, // Update price in case it changed
                 ]);
             } else {
                 // Create new cart item
@@ -90,7 +92,8 @@ class CartController extends Controller
                     'user_id' => $user->id,
                     'menu_item_id' => $request->menu_item_id,
                     'quantity' => $request->quantity,
-                    'price' => $menuItem->price,
+                    'unit_price' => $menuItem->price,
+                    'total_price' => $menuItem->price * $request->quantity,
                 ]);
             }
 
@@ -119,12 +122,16 @@ class CartController extends Controller
             return back()->withErrors(['message' => 'This item is no longer available.']);
         }
 
-        $cart->update([
-            'quantity' => $request->quantity,
-            'price' => $cart->menuItem->price, // Update price in case it changed
-        ]);
+        try {
+            $cart->update([
+                'quantity' => $request->quantity,
+                'unit_price' => $cart->menuItem->price, // Update price in case it changed
+            ]);
 
-        return back()->with('success', 'Cart updated successfully!');
+            return back()->with('success', 'Cart updated successfully!');
+        } catch (\Exception $e) {
+            return back()->withErrors(['message' => 'Failed to update cart. Please try again.']);
+        }
     }
 
     public function remove(Cart $cart)
@@ -134,24 +141,29 @@ class CartController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $cart->delete();
-
-        return back()->with('success', 'Item removed from cart!');
+        try {
+            $cart->delete();
+            return back()->with('success', 'Item removed from cart!');
+        } catch (\Exception $e) {
+            return back()->withErrors(['message' => 'Failed to remove item from cart. Please try again.']);
+        }
     }
 
     public function clear()
     {
         $user = Auth::user();
 
-        Cart::where('user_id', $user->id)->delete();
-
-        return back()->with('success', 'Cart cleared successfully!');
+        try {
+            Cart::where('user_id', $user->id)->delete();
+            return back()->with('success', 'Cart cleared successfully!');
+        } catch (\Exception $e) {
+            return back()->withErrors(['message' => 'Failed to clear cart. Please try again.']);
+        }
     }
 
     public function count()
     {
         $user = Auth::user();
-
         $totalItems = Cart::where('user_id', $user->id)->sum('quantity');
 
         return response()->json(['count' => $totalItems]);
