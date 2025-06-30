@@ -12,17 +12,23 @@ class Payment extends Model
     protected $fillable = [
         'subscription_id',
         'order_id',
+        'payment_number',
         'payment_method',
         'amount',
         'status',
         'transaction_id',
         'payment_date',
         'notes',
+        'gateway',
+        'gateway_response',
+        'paid_at',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'payment_date' => 'datetime',
+        'paid_at' => 'datetime',
+        'gateway_response' => 'array',
     ];
 
     public function subscription()
@@ -44,5 +50,17 @@ class Payment extends Model
     {
         return $query->whereMonth('payment_date', now()->month)
             ->whereYear('payment_date', now()->year);
+    }
+
+    // Boot method to auto-generate payment number
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($payment) {
+            if (!$payment->payment_number) {
+                $payment->payment_number = 'PAY-' . strtoupper(uniqid());
+            }
+        });
     }
 }

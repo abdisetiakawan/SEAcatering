@@ -8,6 +8,7 @@ use App\Models\MealPlan;
 use App\Models\UserAddress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class SubscriptionController extends Controller
@@ -35,11 +36,34 @@ class SubscriptionController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->whereHas('mealPlan', function ($mealPlanQuery) use ($search) {
                     $mealPlanQuery->where('name', 'like', "%{$search}%");
-                });
+                })->orWhere('subscription_number', 'like', "%{$search}%");
             });
         }
 
         $subscriptions = $query->latest()->paginate(10)->withQueryString();
+
+        // Transform data to ensure delivery_address is always available
+        $subscriptions->getCollection()->transform(function ($subscription) {
+            // Ensure delivery_address is loaded and available
+            if (!$subscription->deliveryAddress) {
+                // If no delivery address, create a placeholder
+                $subscription->delivery_address = (object) [
+                    'id' => null,
+                    'address_line_1' => 'Address not available',
+                    'city' => 'N/A',
+                    'province' => 'N/A',
+                    'state' => 'N/A'
+                ];
+            } else {
+                $subscription->delivery_address = $subscription->deliveryAddress;
+            }
+
+            // Ensure all required fields are available
+            $subscription->price_per_meal = $subscription->price_per_meal;
+            $subscription->delivery_frequency = $subscription->frequency;
+
+            return $subscription;
+        });
 
         // Calculate statistics
         $stats = [
@@ -87,6 +111,19 @@ class SubscriptionController extends Controller
             }
         ]);
 
+        // Ensure delivery_address is available
+        if (!$subscription->deliveryAddress) {
+            $subscription->delivery_address = (object) [
+                'id' => null,
+                'address_line_1' => 'Address not available',
+                'city' => 'N/A',
+                'province' => 'N/A',
+                'state' => 'N/A'
+            ];
+        } else {
+            $subscription->delivery_address = $subscription->deliveryAddress;
+        }
+
         return Inertia::render('User/Subscriptions/Show', [
             'subscription' => $subscription
         ]);
@@ -96,13 +133,14 @@ class SubscriptionController extends Controller
     {
         $request->validate([
             'meal_plan_id' => 'required|exists:meal_plans,id',
-            'delivery_address_id' => 'required|exists:user_addresses,id',
+            'user_address_id' => 'required|exists:user_addresses,id',
             'start_date' => 'required|date|after_or_equal:today',
-            'delivery_frequency' => 'required|in:daily,weekly,monthly',
+            'frequency' => 'required|in:daily,weekly,monthly',
             'delivery_days' => 'required|array|min:1',
             'delivery_days.*' => 'in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
-            'preferred_delivery_time' => 'required|string',
-            'duration_months' => 'required|integer|min:1|max:12'
+            'delivery_time_preference' => 'required|string',
+            'duration_months' => 'required|integer|min:1|max:12',
+            'meals_per_day' => 'required|integer|min:1|max:5'
         ]);
 
         // Verify meal plan is active
@@ -111,7 +149,7 @@ class SubscriptionController extends Controller
             ->firstOrFail();
 
         // Verify address belongs to user
-        $address = UserAddress::where('id', $request->delivery_address_id)
+        $address = UserAddress::where('id', $request->user_address_id)
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
@@ -133,9 +171,11 @@ class SubscriptionController extends Controller
             // Calculate pricing based on frequency and duration
             $basePrice = $mealPlan->price_per_meal;
             $deliveriesPerWeek = count($request->delivery_days);
+            $mealsPerDay = $request->meals_per_day;
 
-            $weeklyPrice = $basePrice * $deliveriesPerWeek;
-            $monthlyPrice = $weeklyPrice * 4; // Approximate 4 weeks per month
+            $dailyPrice = $basePrice * $mealsPerDay;
+            $weeklyPrice = $dailyPrice * $deliveriesPerWeek;
+            $monthlyPrice = $weeklyPrice * 4.33; // Average weeks per month
             $totalPrice = $monthlyPrice * $request->duration_months;
 
             // Apply discounts for longer subscriptions
@@ -152,22 +192,24 @@ class SubscriptionController extends Controller
             $subscription = Subscription::create([
                 'user_id' => auth()->id(),
                 'meal_plan_id' => $request->meal_plan_id,
-                'delivery_address_id' => $request->delivery_address_id,
+                'user_address_id' => $request->user_address_id,
+                'subscription_number' => 'SUB-' . strtoupper(Str::random(8)),
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'delivery_frequency' => $request->delivery_frequency,
+                'frequency' => $request->frequency,
                 'delivery_days' => $request->delivery_days,
-                'preferred_delivery_time' => $request->preferred_delivery_time,
-                'price_per_meal' => $basePrice,
+                'delivery_time_preference' => $request->delivery_time_preference,
+                'meals_per_day' => $mealsPerDay,
                 'total_price' => $finalPrice,
                 'discount_amount' => $discountAmount,
                 'status' => 'active',
-                'next_delivery_date' => $this->calculateNextDeliveryDate($startDate, $request->delivery_days)
+                'next_delivery_date' => $this->calculateNextDeliveryDate($startDate, $request->delivery_days),
+                'auto_renew' => true
             ]);
 
             DB::commit();
 
-            return redirect()->route('subscriptions.show', $subscription)
+            return redirect()->route('user.subscriptions.show', $subscription)
                 ->with('success', 'Subscription created successfully!');
         } catch (\Exception $e) {
             DB::rollback();
@@ -183,23 +225,25 @@ class SubscriptionController extends Controller
         }
 
         $request->validate([
-            'delivery_frequency' => 'required|in:daily,weekly,monthly',
+            'frequency' => 'required|in:daily,weekly,monthly',
             'delivery_days' => 'required|array|min:1',
             'delivery_days.*' => 'in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
-            'preferred_delivery_time' => 'required|string',
-            'delivery_address_id' => 'required|exists:user_addresses,id',
+            'delivery_time_preference' => 'required|string',
+            'user_address_id' => 'required|exists:user_addresses,id',
+            'meals_per_day' => 'required|integer|min:1|max:5'
         ]);
 
         // Verify address belongs to user
-        $address = UserAddress::where('id', $request->delivery_address_id)
+        $address = UserAddress::where('id', $request->user_address_id)
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
         $subscription->update([
-            'delivery_frequency' => $request->delivery_frequency,
+            'frequency' => $request->frequency,
             'delivery_days' => $request->delivery_days,
-            'preferred_delivery_time' => $request->preferred_delivery_time,
-            'delivery_address_id' => $request->delivery_address_id,
+            'delivery_time_preference' => $request->delivery_time_preference,
+            'user_address_id' => $request->user_address_id,
+            'meals_per_day' => $request->meals_per_day,
             'next_delivery_date' => $this->calculateNextDeliveryDate(now(), $request->delivery_days)
         ]);
 
@@ -218,8 +262,7 @@ class SubscriptionController extends Controller
         }
 
         $subscription->update([
-            'status' => 'paused',
-            'paused_at' => now()
+            'status' => 'paused'
         ]);
 
         return back()->with('success', 'Subscription paused successfully!');
@@ -241,7 +284,6 @@ class SubscriptionController extends Controller
 
         $subscription->update([
             'status' => 'active',
-            'paused_at' => null,
             'next_delivery_date' => $nextDeliveryDate
         ]);
 
@@ -260,8 +302,7 @@ class SubscriptionController extends Controller
         }
 
         $subscription->update([
-            'status' => 'cancelled',
-            'cancelled_at' => now()
+            'status' => 'cancelled'
         ]);
 
         return back()->with('success', 'Subscription cancelled successfully!');

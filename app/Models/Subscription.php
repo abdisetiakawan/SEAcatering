@@ -13,20 +13,31 @@ class Subscription extends Model
     protected $fillable = [
         'user_id',
         'meal_plan_id',
-        'address_id',
-        'meals_per_day',
-        'days_per_week',
-        'delivery_times',
+        'user_address_id',
+        'subscription_number',
         'start_date',
         'end_date',
         'status',
-        'special_instructions',
+        'frequency',
+        'meals_per_day',
+        'delivery_days',
+        'delivery_time_preference',
+        'total_price',
+        'discount_amount',
+        'special_requirements',
+        'next_delivery_date',
+        'auto_renew',
     ];
 
     protected $casts = [
-        'delivery_times' => 'array',
+        'delivery_days' => 'array',
         'start_date' => 'date',
         'end_date' => 'date',
+        'next_delivery_date' => 'datetime',
+        'total_price' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'meals_per_day' => 'integer',
+        'auto_renew' => 'boolean',
     ];
 
     public function user()
@@ -39,9 +50,15 @@ class Subscription extends Model
         return $this->belongsTo(MealPlan::class);
     }
 
+    public function deliveryAddress()
+    {
+        return $this->belongsTo(UserAddress::class, 'user_address_id');
+    }
+
+    // Alias for backward compatibility
     public function address()
     {
-        return $this->belongsTo(UserAddress::class, 'address_id');
+        return $this->deliveryAddress();
     }
 
     public function orders()
@@ -54,10 +71,20 @@ class Subscription extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function getPricePerMealAttribute()
+    {
+        return $this->mealPlan ? $this->mealPlan->price_per_meal : 0;
+    }
+
+    public function getDeliveryFrequencyAttribute()
+    {
+        return $this->frequency;
+    }
+
     public function getMonthlyAmountAttribute()
     {
-        $dailyAmount = $this->mealPlan->price_per_meal * $this->meals_per_day;
-        $weeklyAmount = $dailyAmount * $this->days_per_week;
+        $dailyAmount = $this->price_per_meal * $this->meals_per_day;
+        $weeklyAmount = $dailyAmount * count($this->delivery_days ?? []);
         return $weeklyAmount * 4.33; // Average weeks per month
     }
 
@@ -74,5 +101,10 @@ class Subscription extends Model
     public function scopeCancelled($query)
     {
         return $query->where('status', 'cancelled');
+    }
+
+    public function scopeExpired($query)
+    {
+        return $query->where('status', 'expired');
     }
 }
