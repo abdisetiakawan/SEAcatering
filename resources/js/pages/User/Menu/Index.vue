@@ -43,7 +43,7 @@
                         <div class="text-sm text-gray-600">Categories</div>
                     </div>
                     <div class="rounded-lg bg-white p-4 shadow-sm">
-                        <div class="text-2xl font-bold text-purple-600">{{ stats.average_rating.toFixed(1) }}/5</div>
+                        <div class="text-2xl font-bold text-purple-600">{{ Number(props.stats.average_rating ?? 0).toFixed(1) }} /5</div>
                         <div class="text-sm text-gray-600">Average Rating</div>
                     </div>
                     <div class="rounded-lg bg-white p-4 shadow-sm">

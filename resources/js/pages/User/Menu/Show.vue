@@ -59,14 +59,12 @@
                                     <Star
                                         v-for="i in 5"
                                         :key="i"
-                                        :class="[
-                                            'h-5 w-5',
-                                            i <= Math.floor(menuItem.average_rating) ? 'fill-current text-yellow-400' : 'text-gray-300',
-                                        ]"
+                                        :i="i <= Math.floor(Number(menuItem.average_rating) || 0) ? 'fill-current text-yellow-400' : 'text-gray-300'"
+                                        :class="['h-5 w-5']"
                                     />
                                 </div>
                                 <span class="text-sm font-medium text-gray-900">
-                                    {{ menuItem.average_rating?.toFixed(1) || '0.0' }}
+                                    {{ (Number(menuItem.average_rating) || 0).toFixed(1) }}
                                 </span>
                             </div>
                             <span class="text-sm text-gray-600"> ({{ menuItem.review_count || 0 }} reviews) </span>

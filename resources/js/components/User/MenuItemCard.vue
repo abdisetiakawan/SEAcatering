@@ -34,7 +34,7 @@
                 <h3 class="line-clamp-1 font-semibold text-gray-900">{{ item.name }}</h3>
                 <div class="flex items-center space-x-1 text-sm">
                     <Star class="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span class="font-medium">{{ item.average_rating.toFixed(1) }}</span>
+                    <span class="font-medium">{{ Number(item.average_rating ?? 0).toFixed(1) }} </span>
                     <span class="text-gray-500">({{ item.review_count }})</span>
                 </div>
             </div>
