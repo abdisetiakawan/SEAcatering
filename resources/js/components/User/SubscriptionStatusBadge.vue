@@ -1,45 +1,36 @@
 <template>
-    <Badge :class="getStatusClass(status)" class="text-xs">
-        <component :is="getStatusIcon(status)" class="mr-1 h-3 w-3" />
-        {{ getStatusLabel(status) }}
-    </Badge>
+    <span :class="badgeClasses">
+        {{ statusText }}
+    </span>
 </template>
 
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, Pause, X } from 'lucide-vue-next';
+import { computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     status: string;
 }>();
 
-const getStatusClass = (status: string) => {
-    const classes: Record<string, string> = {
-        active: 'bg-green-100 text-green-800 border-green-200',
-        paused: 'bg-orange-100 text-orange-800 border-orange-200',
-        cancelled: 'bg-red-100 text-red-800 border-red-200',
-        expired: 'bg-gray-100 text-gray-800 border-gray-200',
-    };
-    return classes[status] || 'bg-gray-100 text-gray-800 border-gray-200';
-};
-
-const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
+const statusText = computed(() => {
+    const statusMap: Record<string, string> = {
         active: 'Active',
         paused: 'Paused',
         cancelled: 'Cancelled',
         expired: 'Expired',
     };
-    return labels[status] || status;
-};
+    return statusMap[props.status] || props.status;
+});
 
-const getStatusIcon = (status: string) => {
-    const icons: Record<string, any> = {
-        active: CheckCircle,
-        paused: Pause,
-        cancelled: X,
-        expired: Clock,
+const badgeClasses = computed(() => {
+    const baseClasses = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
+
+    const statusClasses: Record<string, string> = {
+        active: 'bg-green-100 text-green-800',
+        paused: 'bg-yellow-100 text-yellow-800',
+        cancelled: 'bg-red-100 text-red-800',
+        expired: 'bg-gray-100 text-gray-800',
     };
-    return icons[status] || Clock;
-};
+
+    return `${baseClasses} ${statusClasses[props.status] || 'bg-gray-100 text-gray-800'}`;
+});
 </script>

@@ -6,9 +6,11 @@
                 <div class="flex items-center space-x-4">
                     <img
                         :src="
-                            subscription.meal_plan.image.startsWith('http')
+                            subscription.meal_plan.image && subscription.meal_plan.image.startsWith('http')
                                 ? subscription.meal_plan.image
-                                : '/storage/' + subscription.meal_plan.image
+                                : subscription.meal_plan.image
+                                  ? '/storage/' + subscription.meal_plan.image
+                                  : '/placeholder.svg?height=60&width=60'
                         "
                         :alt="subscription.meal_plan.name"
                         class="h-15 w-15 rounded-lg object-cover"
@@ -19,7 +21,7 @@
                         <div class="mt-1 flex items-center space-x-2">
                             <SubscriptionStatusBadge :status="subscription.status" />
                             <span class="text-sm text-gray-500">•</span>
-                            <span class="text-sm text-gray-500">{{ formatFrequency(subscription.delivery_frequency) }}</span>
+                            <span class="text-sm text-gray-500">{{ formatFrequency(subscription.frequency) }}</span>
                         </div>
                     </div>
                 </div>
@@ -32,6 +34,20 @@
                 </div>
             </div>
 
+            <!-- Subscription Info -->
+            <div class="mb-4 rounded-lg bg-blue-50 p-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-blue-900">Subscription #</p>
+                        <p class="text-sm text-blue-700">{{ subscription.subscription_number }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-blue-900">Meals per Day</p>
+                        <p class="text-sm text-blue-700">{{ subscription.meals_per_day }} meals</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Delivery Info -->
             <div class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div class="rounded-lg bg-gray-50 p-4">
@@ -40,8 +56,9 @@
                         <span class="text-sm font-medium text-gray-700">Delivery Address</span>
                     </div>
                     <p class="mt-1 text-sm text-gray-600">
-                        {{ subscription.delivery_address.address_line_1 }}<br />
-                        {{ subscription.delivery_address.city }}, {{ subscription.delivery_address.province }}
+                        {{ subscription.delivery_address?.address_line_1 || 'Address not available' }}<br />
+                        {{ subscription.delivery_address?.city || 'N/A' }},
+                        {{ subscription.delivery_address?.province || subscription.delivery_address?.state || 'N/A' }}
                     </p>
                 </div>
                 <div class="rounded-lg bg-gray-50 p-4">
@@ -50,14 +67,14 @@
                         <span class="text-sm font-medium text-gray-700">Next Delivery</span>
                     </div>
                     <p class="mt-1 text-sm text-gray-600">
-                        {{ formatDate(subscription.next_delivery_date) }}<br />
-                        {{ subscription.preferred_delivery_time }}
+                        {{ subscription.next_delivery_date ? formatDate(subscription.next_delivery_date) : 'Not scheduled' }}<br />
+                        {{ subscription.delivery_time_preference || 'Not specified' }}
                     </p>
                 </div>
             </div>
 
             <!-- Delivery Days -->
-            <div class="mb-4">
+            <div class="mb-4" v-if="subscription.delivery_days && subscription.delivery_days.length > 0">
                 <p class="mb-2 text-sm font-medium text-gray-700">Delivery Days</p>
                 <div class="flex flex-wrap gap-2">
                     <Badge v-for="day in subscription.delivery_days" :key="day" variant="outline" class="text-xs">
@@ -131,6 +148,8 @@ import { Clock, Eye, MapPin, Pause, Play, Settings, X } from 'lucide-vue-next';
 
 interface Subscription {
     id: number;
+    subscription_number: string;
+    meals_per_day: number;
     meal_plan: {
         id: number;
         name: string;
@@ -138,22 +157,23 @@ interface Subscription {
         price_per_meal: number;
         image: string;
     };
-    delivery_address: {
-        id: number;
+    delivery_address?: {
+        id: number | null;
         address_line_1: string;
         city: string;
-        province: string;
+        province?: string;
+        state?: string;
     };
     start_date: string;
     end_date: string;
     status: string;
-    delivery_frequency: string;
+    frequency: string;
     delivery_days: string[];
-    preferred_delivery_time: string;
+    delivery_time_preference: string;
     price_per_meal: number;
     total_price: number;
     discount_amount: number;
-    next_delivery_date: string;
+    next_delivery_date: string | null;
 }
 
 defineProps<{
