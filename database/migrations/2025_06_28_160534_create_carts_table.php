@@ -15,8 +15,6 @@ return new class extends Migration
             $table->integer('quantity')->default(1);
             $table->decimal('unit_price', 10, 2);
             $table->decimal('total_price', 10, 2);
-            $table->json('customizations')->nullable();
-            $table->text('special_instructions')->nullable();
             $table->timestamps();
 
             $table->unique(['user_id', 'menu_item_id']);
