@@ -76,6 +76,8 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
 
     // Subscription Management
     Route::resource('subscriptions', SubscriptionController::class);
+    Route::patch('subscriptions/{subscription}/update-status', [SubscriptionController::class, 'updateStatus'])
+        ->name('subscriptions.update-status');
 
     // Plans Meal Management
     Route::resource('plans', MealPlanController::class);
