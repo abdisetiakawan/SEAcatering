@@ -14,7 +14,6 @@ class Order extends Model
         'subscription_id',
         'order_number',
         'order_type',
-        'order_source',
         'customer_name',
         'customer_email',
         'customer_phone',

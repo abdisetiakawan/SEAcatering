@@ -16,7 +16,6 @@ class OrderItem extends Model
         'unit_price',
         'total_price',
         'special_instructions',
-        'customizations',
         'nutritional_preferences'
     ];
 
@@ -24,7 +23,6 @@ class OrderItem extends Model
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
         'quantity' => 'integer',
-        'customizations' => 'array',
         'nutritional_preferences' => 'array'
     ];
 
@@ -49,11 +47,6 @@ class OrderItem extends Model
     public function getFormattedPriceAttribute()
     {
         return 'Rp ' . number_format($this->total_price, 0, ',', '.');
-    }
-
-    public function getHasCustomizationsAttribute()
-    {
-        return !empty($this->customizations);
     }
 
     // Methods
