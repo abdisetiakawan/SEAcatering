@@ -176,6 +176,7 @@ class CheckoutController extends Controller
                 'total_amount' => $totalAmount,
                 'special_instructions' => $validated['special_instructions'],
                 'status' => 'pending',
+                'payment_status' => 'unpaid'
             ]);
 
             // Create order items
@@ -194,14 +195,14 @@ class CheckoutController extends Controller
             }
 
             // Create payment record with unpaid status
-            $payment = Payment::create([
+            Payment::create([
                 'order_id' => $order->id,
                 'subscription_id' => null,
                 'amount' => $totalAmount,
                 'payment_method' => $validated['payment_method'],
                 'status' => 'pending',
                 'payment_date' => null,
-                'notes' => 'Payment created for order ' . $order->order_number,
+                'notes' => 'Payment created automatically',
             ]);
 
             // Clear cart

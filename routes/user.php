@@ -46,7 +46,13 @@ Route::middleware(['auth', 'verified'])->prefix('user')->name('user.')->group(fu
         Route::patch('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
         Route::post('/{order}/reorder', [OrderController::class, 'reorder'])->name('reorder');
         Route::get('/{order}/invoice', [OrderController::class, 'invoice'])->name('invoice');
+        Route::patch('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+        Route::post('/orders/{order}/reorder', [OrderController::class, 'reorder'])->name('orders.reorder');
     });
+
+    // Payment
+    Route::get('/orders/{order}/payment', [OrderController::class, 'paymentPage'])->name('orders.payment');
+    Route::post('/orders/{order}/payment', [OrderController::class, 'processPayment'])->name('orders.payment.process');
 
     // Subscriptions
     Route::prefix('subscriptions')->name('subscriptions.')->group(function () {

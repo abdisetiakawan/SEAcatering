@@ -14,7 +14,7 @@
                             </div>
                             <div class="flex items-center space-x-4">
                                 <OrderStatusBadge :status="order.status" />
-                                <PaymentStatusBadge v-if="order.payment" :status="order.payment.status" />
+                                <PaymentStatusBadge :status="order.payment_status" />
                             </div>
                         </div>
                     </div>
@@ -50,7 +50,7 @@
                                     <div>
                                         <h3 class="text-sm font-medium text-gray-900">Status Pembayaran</h3>
                                         <div class="mt-2">
-                                            <PaymentStatusBadge :status="order.payment.status" />
+                                            <PaymentStatusBadge :status="order.payment_status" />
                                         </div>
                                     </div>
                                     <div>
@@ -168,6 +168,10 @@
                                 <h2 class="text-lg font-semibold text-gray-900">Aksi</h2>
                             </div>
                             <div class="space-y-3 p-6">
+                                <Button v-if="order.can_pay" @click="payOrder" variant="default" class="w-full">
+                                    <CreditCard class="mr-2 h-4 w-4" />
+                                    Bayar Sekarang
+                                </Button>
                                 <Button
                                     v-if="order.can_be_cancelled"
                                     @click="confirmCancelOrder"
@@ -249,6 +253,7 @@ interface OrderItem {
 
 interface Payment {
     id: number;
+    payment_number: string;
     amount: number;
     status: string;
     payment_method: string;
@@ -261,6 +266,7 @@ interface Order {
     id: number;
     order_number: string;
     status: string;
+    payment_status: string;
     delivery_date: string;
     delivery_time_slot: string;
     subtotal: number;
@@ -270,6 +276,7 @@ interface Order {
     special_instructions?: string;
     created_at: string;
     can_be_cancelled: boolean;
+    can_pay: boolean;
     order_items: OrderItem[];
     payment?: Payment;
     delivery_address: {
@@ -309,7 +316,7 @@ const getPaymentIcon = (paymentMethod: string) => {
         bank_transfer: Building2,
         e_wallet: Smartphone,
         credit_card: CreditCard,
-        cash: Banknote,
+        cash_on_delivery: Banknote,
     };
     return icons[paymentMethod as keyof typeof icons] || CreditCard;
 };
@@ -319,7 +326,7 @@ const getPaymentMethodName = (paymentMethod: string) => {
         bank_transfer: 'Transfer Bank',
         e_wallet: 'E-Wallet',
         credit_card: 'Kartu Kredit',
-        cash: 'Bayar di Tempat',
+        cash_on_delivery: 'Bayar di Tempat',
     };
     return names[paymentMethod as keyof typeof names] || paymentMethod;
 };
@@ -359,5 +366,9 @@ const reorderItems = () => {
 
 const downloadInvoice = () => {
     router.visit(route('user.orders.invoice', props.order.id));
+};
+
+const payOrder = () => {
+    router.visit(route('user.orders.payment', props.order.id));
 };
 </script>

@@ -123,6 +123,7 @@
                     @view-details="viewOrderDetails"
                     @cancel-order="cancelOrder"
                     @reorder="reorderItems"
+                    @pay-order="payOrder"
                 />
             </div>
 
@@ -163,8 +164,8 @@ import { reactive, ref } from 'vue';
 interface OrderItem {
     id: number;
     quantity: number;
-    price: number;
-    total: number;
+    unit_price: number;
+    total_price: number;
     menu_item: {
         id: number;
         name: string;
@@ -174,27 +175,47 @@ interface OrderItem {
 
 interface DeliveryAddress {
     id: number;
+    recipient_name: string;
+    phone_number: string;
     address_line_1: string;
     address_line_2?: string;
     city: string;
     province: string;
     postal_code: string;
+    full_address: string;
+    delivery_instructions?: string;
+}
+
+interface Payment {
+    id: number;
+    payment_number: string;
+    amount: number;
+    status: string;
+    payment_method: string;
+    payment_date?: string;
+    transaction_id?: string;
 }
 
 interface Order {
     id: number;
     order_number: string;
     order_type: string;
+    order_source: string;
     delivery_date: string;
     delivery_time: string;
+    subtotal: number;
+    tax_amount: number;
+    delivery_fee: number;
     total_amount: number;
-    status: string;
     payment_status: string;
+    can_pay: boolean;
+    status: string;
     special_instructions?: string;
     created_at: string;
     can_be_cancelled: boolean;
     order_items: OrderItem[];
     delivery_address: DeliveryAddress | null;
+    payment: Payment | null;
 }
 
 interface Props {
@@ -218,6 +239,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+console.log(props.orders.data);
+
 // State
 const showCancelModal = ref(false);
 const selectedOrder = ref<Order | null>(null);
@@ -285,5 +308,9 @@ const reorderItems = (order: Order) => {
             },
         },
     );
+};
+
+const payOrder = (order: Order) => {
+    router.visit(route('user.orders.payment', order.id));
 };
 </script>

@@ -28,7 +28,6 @@ class Order extends Model
         'status',
         'payment_status',
         'payment_method',
-        'cancelled_at',
     ];
 
     protected $casts = [
@@ -37,7 +36,6 @@ class Order extends Model
         'tax_amount' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
         'total_amount' => 'decimal:2',
-        'cancelled_at' => 'datetime',
     ];
 
     // Relationships
