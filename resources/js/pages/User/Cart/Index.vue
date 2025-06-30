@@ -369,25 +369,6 @@ const addToCart = (item: RecommendedItem) => {
     );
 };
 
-const applyPromoCode = () => {
-    if (!promoCode.value.trim()) return;
-
-    router.post(
-        route('user.cart.apply-promo'),
-        {
-            promo_code: promoCode.value,
-        },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                successTitle.value = 'Promo Applied';
-                successMessage.value = 'Promo code has been applied successfully.';
-                showSuccessModal.value = true;
-            },
-        },
-    );
-};
-
 const proceedToCheckout = () => {
     if (props.cartItems.length === 0) return;
 

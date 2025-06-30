@@ -185,7 +185,6 @@ interface Order {
     id: number;
     order_number: string;
     order_type: string;
-    order_source: string;
     delivery_date: string;
     delivery_time: string;
     total_amount: number;
@@ -219,7 +218,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-
 // State
 const showCancelModal = ref(false);
 const selectedOrder = ref<Order | null>(null);

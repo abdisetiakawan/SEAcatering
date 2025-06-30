@@ -201,7 +201,6 @@ interface Order {
     id: number;
     order_number: string;
     order_type: string;
-    order_source: string;
     delivery_date: string;
     delivery_time: string;
     subtotal: number;

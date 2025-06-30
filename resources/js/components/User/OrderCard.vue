@@ -57,8 +57,7 @@
                     <div class="flex-1">
                         <p class="text-sm font-medium text-gray-900">Delivery Address</p>
                         <p class="text-sm text-gray-600">
-                            {{ order.delivery_address.address_line_1 }}
-                            <span v-if="order.delivery_address.address_line_2"> , {{ order.delivery_address.address_line_2 }} </span>
+                            {{ props.order.delivery_address?.full_address }}
                         </p>
                         <p class="text-sm text-gray-600">
                             {{ order.delivery_address.city }}, {{ order.delivery_address.province }} {{ order.delivery_address.postal_code }}
@@ -107,6 +106,7 @@ import PaymentStatusBadge from '@/components/User/PaymentStatusBadge.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, MapPin, MessageSquare, RotateCcw, X } from 'lucide-vue-next';
+import { toRaw } from 'vue';
 
 interface OrderItem {
     id: number;
@@ -122,6 +122,7 @@ interface OrderItem {
 
 interface DeliveryAddress {
     id: number;
+    full_address: string;
     address_line_1: string;
     address_line_2?: string;
     city: string;
@@ -133,7 +134,6 @@ interface Order {
     id: number;
     order_number: string;
     order_type: string;
-    order_source: string;
     delivery_date: string;
     delivery_time: string;
     total_amount: number;
@@ -146,9 +146,10 @@ interface Order {
     delivery_address: DeliveryAddress | null;
 }
 
-defineProps<{
+const props = defineProps<{
     order: Order;
 }>();
+console.log('Data ORder', toRaw(props.order));
 
 defineEmits<{
     'view-details': [order: Order];

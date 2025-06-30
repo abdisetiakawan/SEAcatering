@@ -85,7 +85,7 @@
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Semua Kalori</SelectItem>
-                                    <SelectItem value="0-400">400 cal</SelectItem>
+                                    <SelectItem value="0-400"> 400 cal</SelectItem>
                                     <SelectItem value="400-600">400 - 600 cal</SelectItem>
                                     <SelectItem value="600-800">600 - 800 cal</SelectItem>
                                     <SelectItem value="800+"> 800 cal</SelectItem>
@@ -129,7 +129,16 @@
         </div>
 
         <!-- Subscribe Modal -->
-        <SubscribeModal :show="showSubscribeModal" :plan="selectedPlan" @close="showSubscribeModal = false" @subscribed="handleSubscribed" />
+        <SubscribeModal
+            :show="showSubscribeModal"
+            :plan="selectedPlan"
+            :user-addresses="userAddresses"
+            @close="showSubscribeModal = false"
+            @subscribed="handleSubscribed"
+        />
+
+        <!-- Success Modal -->
+        <SuccessModal :show="showSuccessModal" :title="successModal.title" :message="successModal.message" @close="showSuccessModal = false" />
     </UserLayout>
 </template>
 
@@ -139,10 +148,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import MealPlanCard from '@/components/User/MealPlanCard.vue';
 import SubscribeModal from '@/components/User/SubscribeModal.vue';
+import SuccessModal from '@/components/User/SuccessModal.vue';
 import UserLayout from '@/layouts/UserLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Calendar, Package, RefreshCw, Utensils } from 'lucide-vue-next';
-import { reactive, ref, watch } from 'vue';
+import { reactive, ref } from 'vue';
 
 interface MealPlan {
     id: number;
@@ -170,16 +180,42 @@ interface Stats {
     avg_rating: number;
 }
 
+export interface UserAddress {
+    id: number;
+    label: string;
+    recipient_name: string;
+    phone_number: string;
+    address_line_1: string;
+    address_line_2?: string;
+    full_address: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+    delivery_instructions?: string;
+    address_type: 'residential' | 'commercial' | 'apartment';
+    is_default: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
 const props = defineProps<{
     mealPlans: { data: MealPlan[]; links: any[]; meta: any };
     planTypes: PlanType[];
     stats: Stats;
     filters: Record<string, any>;
+    userAddresses: UserAddress[];
 }>();
 
 // State
 const showSubscribeModal = ref(false);
+const showSuccessModal = ref(false);
 const selectedPlan = ref<MealPlan | null>(null);
+
+const successModal = reactive({
+    title: '',
+    message: '',
+});
 
 const filters = reactive({
     plan_type: props.filters.plan_type || 'all',
@@ -198,7 +234,7 @@ const viewPlanDetails = (plan: MealPlan) => {
 };
 
 const handleFilter = () => {
-    router.get(route('user.meal-plans.index'), filters, {
+    router.get(route('meal-plans.index'), filters, {
         preserveState: true,
         replace: true,
     });
@@ -208,13 +244,22 @@ const resetFilters = () => {
     filters.plan_type = 'all';
     filters.price_range = 'all';
     filters.calories = 'all';
-    router.get(route('user.meal-plans.index'));
+    router.get(route('meal-plans.index'));
 };
 
 const handleSubscribed = () => {
     showSubscribeModal.value = false;
     selectedPlan.value = null;
-    router.visit(route('user.subscriptions.index'));
+
+    successModal.title = 'Langganan Berhasil!';
+    successModal.message =
+        'Terima kasih telah berlangganan. Anda akan menerima konfirmasi melalui email dan dapat melihat detail langganan di halaman "My Subscriptions".';
+    showSuccessModal.value = true;
+
+    // Redirect to subscriptions after a delay
+    setTimeout(() => {
+        router.visit(route('user.subscriptions.index'));
+    }, 3000);
 };
 
 const formatCurrency = (amount: number) => {
@@ -225,9 +270,4 @@ const formatCurrency = (amount: number) => {
         maximumFractionDigits: 0,
     }).format(amount);
 };
-
-// Watch for filter changes
-watch(() => filters.plan_type, handleFilter);
-watch(() => filters.price_range, handleFilter);
-watch(() => filters.calories, handleFilter);
 </script>

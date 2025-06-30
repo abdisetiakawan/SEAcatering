@@ -4,7 +4,13 @@
             <!-- Item Image -->
             <div class="flex-shrink-0">
                 <img
-                    :src="item.menu_item.image.startsWith('http') ? item.menu_item.image : '/storage/' + item.menu_item.image"
+                    :src="
+                        item.menu_item.image && item.menu_item.image.startsWith('http')
+                            ? item.menu_item.image
+                            : item.menu_item.image
+                              ? '/storage/' + item.menu_item.image
+                              : '/images/default.png'
+                    "
                     :alt="item.menu_item.name"
                     class="h-20 w-20 rounded-lg object-cover"
                 />
@@ -75,7 +81,7 @@
                     </div>
 
                     <div class="text-right">
-                        <div class="text-sm text-gray-500">{{ formatCurrency(item.price) }} × {{ item.quantity }}</div>
+                        <div class="text-sm text-gray-500">{{ formatCurrency(item.unit_price) }} × {{ item.quantity }}</div>
                         <div class="text-lg font-semibold text-green-600">
                             {{ formatCurrency(item.subtotal) }}
                         </div>
@@ -102,12 +108,13 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Activity, AlertTriangle, Minus, Plus, Trash2, Zap } from 'lucide-vue-next';
+import { toRaw } from 'vue';
 
 interface CartItem {
     id: number;
     menu_item_id: number;
     quantity: number;
-    price: number;
+    unit_price: number;
     subtotal: number;
     total_calories: number;
     total_protein: number;
@@ -129,6 +136,7 @@ interface CartItem {
 const props = defineProps<{
     item: CartItem;
 }>();
+console.log(toRaw(props.item));
 
 const emit = defineEmits<{
     updateQuantity: [cartId: number, quantity: number];

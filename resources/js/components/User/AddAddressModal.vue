@@ -314,13 +314,14 @@ const saveAddress = async () => {
     try {
         if (isEditing.value) {
             router.put(route('user.addresses.update', props.address!.id), form, {
-                onSuccess: () => {
-                    emit('saved', form);
+                onSuccess: (page) => {
+                    // Assuming the response contains the updated address
+                    const updatedAddress = page.props.address || ({ ...form, id: props.address!.id } as UserAddress);
+                    emit('saved', updatedAddress);
                     emit('close');
                 },
                 onError: (errors) => {
                     console.log('Validation errors:', errors);
-                    // Errors akan otomatis tersedia di page.props.errors
                 },
                 onFinish: () => {
                     isLoading.value = false;
@@ -328,13 +329,14 @@ const saveAddress = async () => {
             });
         } else {
             router.post(route('user.addresses.store'), form, {
-                onSuccess: () => {
-                    emit('saved', form);
+                onSuccess: (page) => {
+                    // Assuming the response contains the new address with ID
+                    const newAddress = page.props.address || ({ ...form, id: Date.now() } as UserAddress);
+                    emit('saved', newAddress);
                     emit('close');
                 },
                 onError: (errors) => {
                     console.log('Validation errors:', errors);
-                    // Errors akan otomatis tersedia di page.props.errors
                 },
                 onFinish: () => {
                     isLoading.value = false;

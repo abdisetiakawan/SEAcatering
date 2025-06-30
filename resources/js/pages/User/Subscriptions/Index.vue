@@ -191,6 +191,8 @@ import { reactive, ref } from 'vue';
 
 interface Subscription {
     id: number;
+    subscription_number: string;
+    meals_per_day: number;
     meal_plan: {
         id: number;
         name: string;
@@ -207,9 +209,9 @@ interface Subscription {
     start_date: string;
     end_date: string;
     status: string;
-    delivery_frequency: string;
+    frequency: string;
     delivery_days: string[];
-    preferred_delivery_time: string;
+    delivery_time_preference: string;
     price_per_meal: number;
     total_price: number;
     discount_amount: number;
@@ -309,7 +311,7 @@ const handleModify = (subscription: Subscription) => {
 };
 
 const handleViewDetails = (subscription: Subscription) => {
-    router.visit(route('subscriptions.show', subscription.id));
+    router.visit(route('user.subscriptions.show', subscription.id));
 };
 
 const confirmPause = () => {

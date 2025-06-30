@@ -59,7 +59,7 @@ interface RecommendedItem {
     calories: number;
 }
 
-const props = defineProps<{
+defineProps<{
     item: RecommendedItem;
 }>();
 
