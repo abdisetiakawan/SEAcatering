@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Models\UserAddress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ use Inertia\Inertia;
 
 class CheckoutController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
 
@@ -34,7 +35,7 @@ class CheckoutController extends Controller
                     ],
                     'quantity' => $cart->quantity,
                     'price' => $cart->price,
-                    'subtotal' => $cart->subtotal,
+                    'subtotal' => $cart->total_price,
                 ];
             });
 
@@ -76,6 +77,34 @@ class CheckoutController extends Controller
             'free_delivery_threshold' => $freeDeliveryThreshold,
         ];
 
+        // Payment methods
+        $paymentMethods = [
+            'bank_transfer' => [
+                'name' => 'Transfer Bank',
+                'description' => 'Transfer ke rekening bank kami',
+                'icon' => 'building-2',
+                'fee' => 0,
+            ],
+            'e_wallet' => [
+                'name' => 'E-Wallet',
+                'description' => 'Bayar dengan GoPay, OVO, DANA',
+                'icon' => 'smartphone',
+                'fee' => 2500,
+            ],
+            'credit_card' => [
+                'name' => 'Kartu Kredit',
+                'description' => 'Visa, Mastercard, JCB',
+                'icon' => 'credit-card',
+                'fee' => 5000,
+            ],
+            'cash' => [
+                'name' => 'Bayar di Tempat',
+                'description' => 'Bayar saat makanan diantar',
+                'icon' => 'banknote',
+                'fee' => 0,
+            ],
+        ];
+
         // Time slots
         $timeSlots = [
             '07:00-09:00' => 'Pagi (07:00 - 09:00)',
@@ -91,6 +120,7 @@ class CheckoutController extends Controller
             'cartItems' => $cartItems,
             'addresses' => $addresses,
             'summary' => $summary,
+            'paymentMethods' => $paymentMethods,
             'timeSlots' => $timeSlots,
             'minDeliveryDate' => $minDeliveryDate,
             'maxDeliveryDate' => $maxDeliveryDate,
@@ -103,17 +133,16 @@ class CheckoutController extends Controller
             'delivery_address_id' => 'required|exists:user_addresses,id',
             'delivery_date' => 'required|date|after:today|before:' . now()->addDays(8)->format('Y-m-d'),
             'delivery_time_slot' => 'required|in:07:00-09:00,12:00-14:00,18:00-20:00',
+            'payment_method' => 'required|in:bank_transfer,e_wallet,credit_card,cash',
             'special_instructions' => 'nullable|string|max:500',
         ]);
 
         $user = auth()->user();
 
-        // Verify address belongs to user
         $address = UserAddress::where('id', $validated['delivery_address_id'])
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        // Get cart items
         $cartItems = Cart::with('menuItem')
             ->where('user_id', $user->id)
             ->get();
@@ -126,8 +155,7 @@ class CheckoutController extends Controller
         DB::beginTransaction();
 
         try {
-            // Calculate totals
-            $subtotal = $cartItems->sum('subtotal');
+            $subtotal = $cartItems->sum('total_price');
             $freeDeliveryThreshold = 100000;
             $deliveryFee = $subtotal >= $freeDeliveryThreshold ? 0 : 15000;
             $taxRate = 0.11;
@@ -137,8 +165,8 @@ class CheckoutController extends Controller
             // Create order
             $order = Order::create([
                 'user_id' => $user->id,
-                'subscription_id' => null, // This is a direct order
-                'order_type' => 'direct',
+                'subscription_id' => null,
+                'order_type' => 'one_time',
                 'delivery_address_id' => $validated['delivery_address_id'],
                 'delivery_date' => $validated['delivery_date'],
                 'delivery_time_slot' => $validated['delivery_time_slot'],
@@ -148,19 +176,33 @@ class CheckoutController extends Controller
                 'total_amount' => $totalAmount,
                 'special_instructions' => $validated['special_instructions'],
                 'status' => 'pending',
-                'payment_status' => 'pending',
             ]);
 
             // Create order items
             foreach ($cartItems as $cartItem) {
+                $unitPrice = $cartItem->unit_price;
+                $quantity = $cartItem->quantity;
+                $totalPrice = $unitPrice * $quantity;
+
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $cartItem->menu_item_id,
-                    'quantity' => $cartItem->quantity,
-                    'price' => $cartItem->price,
-                    'total_price' => $cartItem->subtotal,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'total_price' => $totalPrice,
                 ]);
             }
+
+            // Create payment record with unpaid status
+            $payment = Payment::create([
+                'order_id' => $order->id,
+                'subscription_id' => null,
+                'amount' => $totalAmount,
+                'payment_method' => $validated['payment_method'],
+                'status' => 'pending',
+                'payment_date' => null,
+                'notes' => 'Payment created for order ' . $order->order_number,
+            ]);
 
             // Clear cart
             Cart::where('user_id', $user->id)->delete();
@@ -171,7 +213,6 @@ class CheckoutController extends Controller
                 ->with('success', 'Pesanan berhasil dibuat! Silakan lakukan pembayaran.');
         } catch (\Exception $e) {
             DB::rollback();
-
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Terjadi kesalahan saat membuat pesanan. Silakan coba lagi.');

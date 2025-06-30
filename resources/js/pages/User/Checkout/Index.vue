@@ -14,7 +14,7 @@
                             </div>
                             <div class="text-right">
                                 <p class="text-sm text-gray-500">{{ cartItems.length }} item</p>
-                                <p class="text-lg font-semibold text-green-600">{{ formatCurrency(summary.total_amount) }}</p>
+                                <p class="text-lg font-semibold text-green-600">{{ formatCurrency(finalTotal) }}</p>
                             </div>
                         </div>
                     </div>
@@ -137,6 +137,48 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Payment Method -->
+                        <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                            <div class="border-b border-gray-200 p-6">
+                                <h2 class="text-lg font-semibold text-gray-900">Metode Pembayaran</h2>
+                            </div>
+                            <div class="p-6">
+                                <div class="space-y-3">
+                                    <div
+                                        v-for="(method, key) in paymentMethods"
+                                        :key="key"
+                                        class="relative cursor-pointer rounded-lg border p-4 transition-colors"
+                                        :class="
+                                            form.payment_method === key ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                                        "
+                                        @click="form.payment_method = key"
+                                    >
+                                        <div class="flex items-start">
+                                            <input
+                                                type="radio"
+                                                :value="key"
+                                                v-model="form.payment_method"
+                                                class="mt-1 h-4 w-4 border-gray-300 text-green-600 focus:ring-green-500"
+                                            />
+                                            <div class="ml-3 flex-1">
+                                                <div class="flex items-center justify-between">
+                                                    <div class="flex items-center">
+                                                        <component :is="getPaymentIcon(method.icon)" class="mr-2 h-5 w-5 text-gray-600" />
+                                                        <h3 class="text-sm font-medium text-gray-900">{{ method.name }}</h3>
+                                                    </div>
+                                                    <span v-if="method.fee > 0" class="text-xs text-gray-500">
+                                                        +{{ formatCurrency(method.fee) }}
+                                                    </span>
+                                                </div>
+                                                <p class="mt-1 text-sm text-gray-500">{{ method.description }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <InputError :message="form.errors.payment_method" class="mt-2" />
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Order Summary -->
@@ -190,6 +232,10 @@
                                     <span class="text-gray-600">Pajak (11%)</span>
                                     <span class="font-medium">{{ formatCurrency(summary.tax_amount) }}</span>
                                 </div>
+                                <div v-if="paymentFee > 0" class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Biaya Pembayaran</span>
+                                    <span class="font-medium">{{ formatCurrency(paymentFee) }}</span>
+                                </div>
                                 <div v-if="summary.delivery_fee === 0" class="rounded bg-green-50 p-2 text-xs text-green-600">
                                     🎉 Selamat! Anda mendapat gratis ongkir untuk pembelian di atas
                                     {{ formatCurrency(summary.free_delivery_threshold) }}
@@ -197,7 +243,7 @@
                                 <div class="border-t pt-3">
                                     <div class="flex justify-between text-lg font-semibold">
                                         <span>Total</span>
-                                        <span class="text-green-600">{{ formatCurrency(summary.total_amount) }}</span>
+                                        <span class="text-green-600">{{ formatCurrency(finalTotal) }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -230,7 +276,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import UserLayout from '@/layouts/UserLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { CreditCard, Loader2, MapPin, Plus } from 'lucide-vue-next';
+import { Banknote, Building2, CreditCard, Loader2, MapPin, Plus, Smartphone } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface CartItem {
@@ -266,10 +312,18 @@ interface Summary {
     free_delivery_threshold: number;
 }
 
+interface PaymentMethod {
+    name: string;
+    description: string;
+    icon: string;
+    fee: number;
+}
+
 const props = defineProps<{
     cartItems: CartItem[];
     addresses: Address[];
     summary: Summary;
+    paymentMethods: Record<string, PaymentMethod>;
     timeSlots: Record<string, string>;
     minDeliveryDate: string;
     maxDeliveryDate: string;
@@ -279,11 +333,23 @@ const form = useForm({
     delivery_address_id: props.addresses.find((addr) => addr.is_default)?.id || props.addresses[0]?.id || null,
     delivery_date: props.minDeliveryDate,
     delivery_time_slot: '',
+    payment_method: '',
     special_instructions: '',
 });
 
+const paymentFee = computed(() => {
+    if (!form.payment_method || !props.paymentMethods[form.payment_method]) {
+        return 0;
+    }
+    return props.paymentMethods[form.payment_method].fee;
+});
+
+const finalTotal = computed(() => {
+    return props.summary.total_amount + paymentFee.value;
+});
+
 const canPlaceOrder = computed(() => {
-    return form.delivery_address_id && form.delivery_date && form.delivery_time_slot && props.cartItems.length > 0;
+    return form.delivery_address_id && form.delivery_date && form.delivery_time_slot && form.payment_method && props.cartItems.length > 0;
 });
 
 const formatCurrency = (amount: number) => {
@@ -293,6 +359,16 @@ const formatCurrency = (amount: number) => {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     }).format(amount);
+};
+
+const getPaymentIcon = (iconName: string) => {
+    const icons = {
+        'building-2': Building2,
+        smartphone: Smartphone,
+        'credit-card': CreditCard,
+        banknote: Banknote,
+    };
+    return icons[iconName as keyof typeof icons] || CreditCard;
 };
 
 const submitOrder = () => {
