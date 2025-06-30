@@ -14,6 +14,7 @@ class SubscriptionSeeder extends Seeder
                 'subscription_number' => 'SUB-' . date('Ymd') . '-001',
                 'user_id' => 2,
                 'meal_plan_id' => 1,
+                'user_address_id' => \App\Models\UserAddress::where('user_id', 2)->where('is_default', true)->value('id'),
                 'start_date' => now()->addDays(1),
                 'end_date' => now()->addDays(31),
                 'status' => 'active',
@@ -26,6 +27,7 @@ class SubscriptionSeeder extends Seeder
                 'subscription_number' => 'SUB-' . date('Ymd') . '-002',
                 'user_id' => 3,
                 'meal_plan_id' => 2,
+                'user_address_id' => \App\Models\UserAddress::where('user_id', 3)->where('is_default', true)->value('id'),
                 'start_date' => now()->subDays(5),
                 'end_date' => now()->addDays(25),
                 'status' => 'active',
@@ -38,6 +40,7 @@ class SubscriptionSeeder extends Seeder
                 'subscription_number' => 'SUB-' . date('Ymd') . '-003',
                 'user_id' => 4,
                 'meal_plan_id' => 3,
+                'user_address_id' => \App\Models\UserAddress::where('user_id', 4)->where('is_default', true)->value('id'),
                 'start_date' => now()->subDays(10),
                 'end_date' => now()->addDays(20),
                 'status' => 'active',
@@ -50,6 +53,7 @@ class SubscriptionSeeder extends Seeder
                 'subscription_number' => 'SUB-' . date('Ymd') . '-004',
                 'user_id' => 5,
                 'meal_plan_id' => 4,
+                'user_address_id' => \App\Models\UserAddress::where('user_id', 5)->where('is_default', true)->value('id'),
                 'start_date' => now()->subDays(3),
                 'end_date' => now()->addDays(4),
                 'status' => 'paused',
@@ -62,6 +66,7 @@ class SubscriptionSeeder extends Seeder
                 'subscription_number' => 'SUB-' . date('Ymd') . '-005',
                 'user_id' => 6,
                 'meal_plan_id' => 5,
+                'user_address_id' => \App\Models\UserAddress::where('user_id', 6)->where('is_default', true)->value('id'),
                 'start_date' => now()->subDays(15),
                 'end_date' => now()->subDays(1),
                 'status' => 'expired',
@@ -73,7 +78,7 @@ class SubscriptionSeeder extends Seeder
         ];
 
         foreach ($subscriptions as $subscription) {
-            Subscription::create($subscription);
+            \App\Models\Subscription::create($subscription);
         }
     }
 }

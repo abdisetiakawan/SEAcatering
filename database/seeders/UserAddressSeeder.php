@@ -26,7 +26,7 @@ class UserAddressSeeder extends Seeder
                 'longitude' => 106.8456,
                 'is_default' => true,
                 'delivery_instructions' => 'Tolong hubungi via intercom, unit 15A',
-                'address_type' => 'residential',
+                'address_type' => 'home',
             ],
             [
                 'user_id' => 2,
@@ -43,7 +43,7 @@ class UserAddressSeeder extends Seeder
                 'longitude' => 106.8229,
                 'is_default' => false,
                 'delivery_instructions' => 'Titip di resepsionis lantai 25',
-                'address_type' => 'commercial',
+                'address_type' => 'office',
             ],
 
             // User ID 3 (Jane Smith)
@@ -62,7 +62,7 @@ class UserAddressSeeder extends Seeder
                 'longitude' => 106.8106,
                 'is_default' => true,
                 'delivery_instructions' => 'Rumah cat hijau, ada pagar putih',
-                'address_type' => 'residential',
+                'address_type' => 'home',
             ],
 
             // User ID 4 (Bob Wilson)
@@ -81,7 +81,7 @@ class UserAddressSeeder extends Seeder
                 'longitude' => 106.7844,
                 'is_default' => true,
                 'delivery_instructions' => 'Masuk dari pintu samping mall',
-                'address_type' => 'residential',
+                'address_type' => 'home',
             ],
 
             // User ID 5 (Alice Johnson)
@@ -100,7 +100,7 @@ class UserAddressSeeder extends Seeder
                 'longitude' => 106.9056,
                 'is_default' => true,
                 'delivery_instructions' => 'Rumah sudut, ada mobil merah di depan',
-                'address_type' => 'residential',
+                'address_type' => 'home',
             ],
 
             // User ID 6 (Charlie Brown)
@@ -119,7 +119,7 @@ class UserAddressSeeder extends Seeder
                 'longitude' => 106.8650,
                 'is_default' => true,
                 'delivery_instructions' => 'Masuk cluster, rumah nomor 15',
-                'address_type' => 'residential',
+                'address_type' => 'home',
             ],
         ];
 
