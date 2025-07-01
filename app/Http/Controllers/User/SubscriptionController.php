@@ -287,7 +287,6 @@ class SubscriptionController extends Controller
             return redirect()->route('user.subscriptions.payment', $subscription)
                 ->with('success', 'Subscription created successfully! Please complete payment to activate.');
         } catch (\Exception $e) {
-            dd($e);
             DB::rollback();
             return back()->withErrors(['message' => 'Failed to create subscription: ' . $e->getMessage()]);
         }
