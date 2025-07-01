@@ -58,10 +58,14 @@ Route::middleware(['auth', 'verified'])->prefix('user')->name('user.')->group(fu
     Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
         Route::get('/', [SubscriptionController::class, 'index'])->name('index');
         Route::get('/{subscription}', [SubscriptionController::class, 'show'])->name('show');
+        Route::post('/', [SubscriptionController::class, 'store'])->name('store');
         Route::patch('/{subscription}/pause', [SubscriptionController::class, 'pause'])->name('pause');
         Route::patch('/{subscription}/resume', [SubscriptionController::class, 'resume'])->name('resume');
         Route::patch('/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
         Route::patch('/{subscription}/modify', [SubscriptionController::class, 'modify'])->name('modify');
+        // Payment Subcription
+        Route::get('/{subscription}/payment', [SubscriptionController::class, 'paymentPage'])->name('payment');
+        Route::post('/{subscription}/payment', [SubscriptionController::class, 'processPayment'])->name('process-payment');
     });
 
 
