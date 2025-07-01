@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('subscription_number')->unique();
             $table->date('start_date');
             $table->date('end_date');
-            $table->enum('status', ['active', 'paused', 'cancelled', 'expired'])->default('active');
+            $table->enum('status', ['pending', 'active', 'paused', 'cancelled', 'expired'])->default('active');
             $table->enum('frequency', ['daily', 'weekly', 'monthly'])->default('weekly');
             $table->integer('meals_per_day')->default(1);
             $table->json('delivery_days');

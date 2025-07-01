@@ -31,6 +31,9 @@ return new class extends Migration
             $table->enum('address_type', ['home', 'office', 'other'])->default('home');
             $table->timestamps();
             $table->softDeletes();
+
+            $table->index(['user_id', 'is_default']);
+            $table->index('address_type');
         });
     }
 
