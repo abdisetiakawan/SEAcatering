@@ -26,6 +26,9 @@ export interface Subscription {
     discount_amount: number;
     next_delivery_date: string;
     created_at: string;
+    delivery_frequency: string;
+    preferred_delivery_time: string;
+    delivery_address_id: number;
     latest_order: Order | null;
 }
 

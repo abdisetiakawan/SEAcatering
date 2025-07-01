@@ -101,18 +101,10 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Subscription } from '@/types/subscription';
 import { router } from '@inertiajs/vue3';
 import { Loader2 } from 'lucide-vue-next';
 import { reactive, ref, watch } from 'vue';
-
-interface Subscription {
-    id: number;
-    delivery_frequency: string;
-    delivery_days: string[];
-    preferred_delivery_time: string;
-    delivery_address_id: number;
-    price_per_meal: number;
-}
 
 interface Address {
     id: number;

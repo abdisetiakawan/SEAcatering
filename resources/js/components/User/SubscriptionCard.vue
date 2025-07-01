@@ -58,7 +58,7 @@
                     <p class="mt-1 text-sm text-gray-600">
                         {{ subscription.delivery_address?.address_line_1 || 'Address not available' }}<br />
                         {{ subscription.delivery_address?.city || 'N/A' }},
-                        {{ subscription.delivery_address?.province || subscription.delivery_address?.state || 'N/A' }}
+                        {{ subscription.delivery_address?.province || 'N/A' }}
                     </p>
                 </div>
                 <div class="rounded-lg bg-gray-50 p-4">

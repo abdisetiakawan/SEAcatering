@@ -1,4 +1,4 @@
-<template>
+    <template>
     <UserLayout>
         <Head title="My Subscriptions" />
 
@@ -186,50 +186,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import UserLayout from '@/layouts/UserLayout.vue';
+import { Subscription } from '@/types/subscription';
 import { Head, router } from '@inertiajs/vue3';
 import { Calendar, CheckCircle, Pause, PiggyBank, Plus, RefreshCw, Search, Truck } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
-
-interface Order {
-    id: number;
-    order_number: string;
-    delivery_date: string;
-    status: string;
-    payment_status: string;
-    total_amount: number;
-    can_pay: boolean;
-}
-interface Subscription {
-    can_pay: boolean;
-    id: number;
-    subscription_number: string;
-    meals_per_day: number;
-    meal_plan: {
-        id: number;
-        name: string;
-        type: string;
-        price_per_meal: number;
-        image: string;
-    };
-    delivery_address: {
-        id: number;
-        address_line_1: string;
-        city: string;
-        province: string;
-    };
-    start_date: string;
-    end_date: string;
-    status: string;
-    frequency: string;
-    delivery_days: string[];
-    delivery_time_preference: string;
-    price_per_meal: number;
-    total_price: number;
-    discount_amount: number;
-    next_delivery_date: string;
-    created_at: string;
-    latest_order: Order | null;
-}
 
 const props = defineProps<{
     subscriptions: { data: Subscription[]; links: any[]; meta: any };
@@ -293,12 +253,12 @@ const resetFilters = () => {
     router.get(route('user.subscriptions.index'));
 };
 
-const handlePause = (subscription: Subscription) => {
+const handlePause = (subscription: Subscription) : any => {
     selectedSubscription.value = subscription;
     showPauseModal.value = true;
 };
 
-const handleResume = (subscription: Subscription) => {
+const handleResume = (subscription: Subscription) : any => {
     router.patch(
         route('user.subscriptions.resume', subscription.id),
         {},
@@ -313,21 +273,21 @@ const handleResume = (subscription: Subscription) => {
     );
 };
 
-const handleCheckout = (subscription: Subscription) => {
+const handleCheckout = (subscription: Subscription) : any => {
     router.visit(route('user.subscriptions.payment', subscription.id));
 };
 
-const handleCancel = (subscription: Subscription) => {
+const handleCancel = (subscription: Subscription) : any => {
     selectedSubscription.value = subscription;
     showCancelModal.value = true;
 };
 
-const handleModify = (subscription: Subscription) => {
+const handleModify = (subscription: Subscription) : any => {
     selectedSubscription.value = subscription;
     showModifyModal.value = true;
 };
 
-const handleViewDetails = (subscription: Subscription) => {
+const handleViewDetails = (subscription: Subscription) : any => {
     router.visit(route('user.subscriptions.show', subscription.id));
 };
 
