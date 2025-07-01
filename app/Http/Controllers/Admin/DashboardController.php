@@ -163,21 +163,44 @@ class DashboardController extends Controller
             $revenue = $revenueData->firstWhere('date', $dateStr);
 
             $chartData[] = [
-                'date' => $currentDate->format('M d'),
-                'revenue' => $revenue ? $revenue->total : 0,
+                'date' => $currentDate->format('Y-m-d'),
+                'label' => $currentDate->format('M d'),
+                'revenue' => $revenue ? (float) $revenue->total : 0,
                 'formatted_date' => $currentDate->format('d M Y'),
             ];
 
             $currentDate->addDay();
         }
 
-        return $chartData;
+        return [
+            'labels' => collect($chartData)->pluck('label')->toArray(),
+            'datasets' => [
+                [
+                    'label' => 'Revenue',
+                    'data' => collect($chartData)->pluck('revenue')->toArray(),
+                    'borderColor' => 'rgb(34, 197, 94)',
+                    'backgroundColor' => 'rgba(34, 197, 94, 0.1)',
+                    'tension' => 0.4,
+                    'fill' => true,
+                ]
+            ],
+            'rawData' => $chartData
+        ];
     }
 
     private function getSubscriptionGrowthData($startDate)
     {
+        // Get new subscriptions per day
         $subscriptionData = Subscription::where('created_at', '>=', $startDate)
             ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        // Get cancelled subscriptions per day
+        $cancelledData = Subscription::where('status', 'cancelled')
+            ->where('updated_at', '>=', $startDate)
+            ->selectRaw('DATE(updated_at) as date, COUNT(*) as count')
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -185,30 +208,68 @@ class DashboardController extends Controller
         $chartData = [];
         $currentDate = $startDate->copy();
         $endDate = Carbon::now();
-        $cumulativeCount = Subscription::where('created_at', '<', $startDate)->count();
+        $cumulativeActive = Subscription::where('created_at', '<', $startDate)
+            ->where('status', 'active')
+            ->count();
 
         while ($currentDate <= $endDate) {
             $dateStr = $currentDate->format('Y-m-d');
             $newSubs = $subscriptionData->firstWhere('date', $dateStr);
-            $dailyCount = $newSubs ? $newSubs->count : 0;
-            $cumulativeCount += $dailyCount;
+            $cancelledSubs = $cancelledData->firstWhere('date', $dateStr);
+
+            $dailyNew = $newSubs ? $newSubs->count : 0;
+            $dailyCancelled = $cancelledSubs ? $cancelledSubs->count : 0;
+            $netGrowth = $dailyNew - $dailyCancelled;
+            $cumulativeActive += $netGrowth;
 
             $chartData[] = [
-                'date' => $currentDate->format('M d'),
-                'new_subscriptions' => $dailyCount,
-                'total_subscriptions' => $cumulativeCount,
+                'date' => $currentDate->format('Y-m-d'),
+                'label' => $currentDate->format('M d'),
+                'new_subscriptions' => $dailyNew,
+                'cancelled_subscriptions' => $dailyCancelled,
+                'net_growth' => $netGrowth,
+                'total_active' => max(0, $cumulativeActive),
                 'formatted_date' => $currentDate->format('d M Y'),
             ];
 
             $currentDate->addDay();
         }
 
-        return $chartData;
+        return [
+            'labels' => collect($chartData)->pluck('label')->toArray(),
+            'datasets' => [
+                [
+                    'label' => 'New Subscriptions',
+                    'data' => collect($chartData)->pluck('new_subscriptions')->toArray(),
+                    'borderColor' => 'rgb(59, 130, 246)',
+                    'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+                    'tension' => 0.4,
+                    'fill' => false,
+                ],
+                [
+                    'label' => 'Total Active',
+                    'data' => collect($chartData)->pluck('total_active')->toArray(),
+                    'borderColor' => 'rgb(16, 185, 129)',
+                    'backgroundColor' => 'rgba(16, 185, 129, 0.1)',
+                    'tension' => 0.4,
+                    'fill' => true,
+                ],
+                [
+                    'label' => 'Cancelled',
+                    'data' => collect($chartData)->pluck('cancelled_subscriptions')->toArray(),
+                    'borderColor' => 'rgb(239, 68, 68)',
+                    'backgroundColor' => 'rgba(239, 68, 68, 0.1)',
+                    'tension' => 0.4,
+                    'fill' => false,
+                ]
+            ],
+            'rawData' => $chartData
+        ];
     }
 
     private function getRecentOrders()
     {
-        $orders = Order::with(['subscription.user', 'subscription.mealPlan'])
+        return Order::with(['user', 'subscription.user', 'subscription.mealPlan'])
             ->latest()
             ->take(8)
             ->get()
@@ -216,9 +277,9 @@ class DashboardController extends Controller
                 return [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
-                    'customer' => $order->subscription?->user?->name ?? '-',
-                    'customer_email' => $order->subscription?->user?->email ?? '-',
-                    'plan' => $order->subscription?->mealPlan?->name ?? '-',
+                    'customer' => $order->customer_name,
+                    'customer_email' => $order->customer_email,
+                    'plan' => $order->subscription?->mealPlan?->name ?? 'Direct Order',
                     'delivery_date' => optional($order->delivery_date)->format('d M Y') ?? '-',
                     'delivery_time' => $order->delivery_time_slot ?? '-',
                     'total_amount' => $order->total_amount ?? 0,
@@ -230,7 +291,8 @@ class DashboardController extends Controller
 
     private function getLowStockItems()
     {
-        return Inventory::whereRaw('current_stock <= minimum_stock * 1.2') // Alert when stock is 20% above minimum
+        return Inventory::with('menuItem')
+            ->whereRaw('current_stock <= minimum_stock * 1.2') // Alert when stock is 20% above minimum
             ->orderByRaw('(current_stock::float / NULLIF(minimum_stock, 0)) ASC')
             ->take(6)
             ->get()
@@ -395,14 +457,14 @@ class DashboardController extends Controller
         $activities = collect();
 
         // Recent orders (last 6 hours)
-        $recentOrders = Order::with('subscription.user')
+        $recentOrders = Order::with(['user', 'subscription.user'])
             ->where('created_at', '>=', Carbon::now()->subHours(6))
             ->latest()
             ->take(3)
             ->get();
 
         foreach ($recentOrders as $order) {
-            $customerName = $order->subscription?->user?->name ?? $order->user?->name ?? 'Unknown Customer';
+            $customerName = $order->customer_name;
 
             $activities->push([
                 'id' => 'order_' . $order->id,
@@ -436,7 +498,7 @@ class DashboardController extends Controller
         }
 
         // Recent payments (last 12 hours)
-        $recentPayments = Payment::with('subscription.user')
+        $recentPayments = Payment::with(['subscription.user', 'order.user'])
             ->where('status', 'completed')
             ->where('payment_date', '>=', Carbon::now()->subHours(12))
             ->latest('payment_date')
@@ -444,11 +506,13 @@ class DashboardController extends Controller
             ->get();
 
         foreach ($recentPayments as $payment) {
+            $customerName = $payment->subscription?->user?->name ?? $payment->order?->user?->name ?? 'Unknown';
+
             $activities->push([
                 'id' => 'payment_' . $payment->id,
                 'type' => 'payment',
                 'title' => 'Payment Received',
-                'description' => "Payment of Rp " . number_format($payment->amount, 0, ',', '.') . " from {$payment->subscription->user->name}",
+                'description' => "Payment of Rp " . number_format($payment->amount, 0, ',', '.') . " from {$customerName}",
                 'amount' => $payment->amount,
                 'time' => $payment->payment_date->diffForHumans(),
                 'timestamp' => $payment->payment_date,
@@ -476,7 +540,7 @@ class DashboardController extends Controller
         }
 
         // Recent deliveries completed (last 6 hours)
-        $recentDeliveries = Delivery::with('order.subscription.user')
+        $recentDeliveries = Delivery::with(['order.user', 'order.subscription.user'])
             ->where('status', 'delivered')
             ->where('delivered_at', '>=', Carbon::now()->subHours(6))
             ->latest('delivered_at')
@@ -484,11 +548,13 @@ class DashboardController extends Controller
             ->get();
 
         foreach ($recentDeliveries as $delivery) {
+            $customerName = $delivery->order->customer_name;
+
             $activities->push([
                 'id' => 'delivery_' . $delivery->id,
                 'type' => 'delivery',
                 'title' => 'Order Delivered',
-                'description' => "Order #{$delivery->order->order_number} delivered to {$delivery->order->subscription->user->name}",
+                'description' => "Order #{$delivery->order->order_number} delivered to {$customerName}",
                 'time' => $delivery->delivered_at->diffForHumans(),
                 'timestamp' => $delivery->delivered_at,
             ]);

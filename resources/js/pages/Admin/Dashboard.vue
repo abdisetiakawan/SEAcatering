@@ -17,8 +17,8 @@
                                     <p class="text-sm text-gray-500">Hari ini</p>
                                     <p class="text-lg font-semibold">{{ currentDate }}</p>
                                 </div>
-                                <Button @click="refreshData" variant="outline" size="sm">
-                                    <RefreshCw class="mr-2 h-4 w-4" />
+                                <Button @click="refreshData" variant="outline" size="sm" :disabled="refreshing">
+                                    <RefreshCw class="mr-2 h-4 w-4" :class="{ 'animate-spin': refreshing }" />
                                     Refresh
                                 </Button>
                             </div>
@@ -35,9 +35,9 @@
                                 <div>
                                     <p class="text-sm font-medium text-gray-600">Total Revenue</p>
                                     <p class="text-2xl font-bold text-green-600">{{ formatCurrency(stats.totalRevenue) }}</p>
-                                    <p class="mt-1 text-xs text-green-600">
-                                        <TrendingUp class="mr-1 inline h-3 w-3" />
-                                        +{{ stats.revenueGrowth }}% dari bulan lalu
+                                    <p class="mt-1 text-xs" :class="stats.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'">
+                                        <component :is="stats.revenueGrowth >= 0 ? TrendingUp : TrendingDown" class="mr-1 inline h-3 w-3" />
+                                        {{ stats.revenueGrowth >= 0 ? '+' : '' }}{{ stats.revenueGrowth }}% dari bulan lalu
                                     </p>
                                 </div>
                                 <div class="rounded-full bg-green-100 p-3">
@@ -111,38 +111,41 @@
                     <Card>
                         <CardHeader>
                             <CardTitle class="flex items-center justify-between">
-                                <span>Revenue Trend (30 Days)</span>
-                                <select v-model="revenueFilter" class="rounded border px-2 py-1 text-sm">
+                                <span>Revenue Trend</span>
+                                <select
+                                    v-model="revenueFilter"
+                                    @change="updateRevenueChart"
+                                    class="rounded border px-2 py-1 text-sm focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                                >
+                                    <option value="7">7 Days</option>
                                     <option value="30">30 Days</option>
                                     <option value="90">90 Days</option>
-                                    <option value="365">1 Year</option>
                                 </select>
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div class="flex h-64 items-center justify-center rounded bg-gray-50">
-                                <div class="text-center">
-                                    <BarChart3 class="mx-auto mb-2 h-12 w-12 text-gray-400" />
-                                    <p class="text-gray-500">Revenue Chart</p>
-                                    <p class="text-sm text-gray-400">Chart akan ditampilkan di sini</p>
-                                </div>
-                            </div>
+                            <RevenueChart :data="revenueChartData" :loading="chartLoading.revenue" title="Daily Revenue" />
                         </CardContent>
                     </Card>
 
                     <!-- Subscription Growth -->
                     <Card>
                         <CardHeader>
-                            <CardTitle>Subscription Growth</CardTitle>
+                            <CardTitle class="flex items-center justify-between">
+                                <span>Subscription Growth</span>
+                                <select
+                                    v-model="subscriptionFilter"
+                                    @change="updateSubscriptionChart"
+                                    class="rounded border px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                >
+                                    <option value="7">7 Days</option>
+                                    <option value="30">30 Days</option>
+                                    <option value="90">90 Days</option>
+                                </select>
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div class="flex h-64 items-center justify-center rounded bg-gray-50">
-                                <div class="text-center">
-                                    <TrendingUp class="mx-auto mb-2 h-12 w-12 text-gray-400" />
-                                    <p class="text-gray-500">Growth Chart</p>
-                                    <p class="text-sm text-gray-400">Chart akan ditampilkan di sini</p>
-                                </div>
-                            </div>
+                            <SubscriptionChart :data="subscriptionChartData" :loading="chartLoading.subscription" title="Subscription Trends" />
                         </CardContent>
                     </Card>
                 </div>
@@ -191,15 +194,21 @@
                                 <div
                                     v-for="order in recentOrders"
                                     :key="order.id"
-                                    class="flex items-center justify-between rounded-lg border p-3 hover:bg-gray-50"
+                                    class="flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-gray-50"
+                                    @click="navigateTo('admin.orders.show', { order: order.id })"
                                 >
                                     <div>
                                         <p class="text-sm font-medium">{{ order.customer }}</p>
-                                        <p class="text-xs text-gray-600">{{ order.plan }} • {{ order.time }}</p>
+                                        <p class="text-xs text-gray-600">{{ order.plan }} • {{ order.created_at }}</p>
+                                        <p class="text-xs text-gray-500">{{ formatCurrency(order.total_amount) }}</p>
                                     </div>
                                     <Badge :class="getOrderStatusClass(order.status)" class="text-xs">
                                         {{ order.status }}
                                     </Badge>
+                                </div>
+                                <div v-if="recentOrders.length === 0" class="py-4 text-center text-gray-500">
+                                    <Package class="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                                    <p class="text-sm">No recent orders</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -227,6 +236,7 @@
                                     <div>
                                         <p class="text-sm font-medium">{{ item.name }}</p>
                                         <p class="text-xs text-gray-600">{{ item.current }} {{ item.unit }} remaining</p>
+                                        <p class="text-xs text-gray-500">Min: {{ item.minimum }} {{ item.unit }}</p>
                                     </div>
                                     <Badge
                                         :class="item.status === 'critical' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'"
@@ -234,6 +244,10 @@
                                     >
                                         {{ item.status }}
                                     </Badge>
+                                </div>
+                                <div v-if="lowStockItems.length === 0" class="py-4 text-center text-gray-500">
+                                    <AlertTriangle class="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                                    <p class="text-sm">All items in stock</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -260,16 +274,20 @@
                                             <p class="text-xs text-gray-600">{{ slot.period }}</p>
                                         </div>
                                         <div>
-                                            <p class="font-medium">{{ slot.orders }} Orders</p>
-                                            <p class="text-sm text-gray-600">{{ slot.drivers }} drivers assigned</p>
+                                            <p class="font-medium">{{ slot.total_orders }} Orders</p>
+                                            <p class="text-sm text-gray-600">{{ slot.drivers_assigned }} drivers assigned</p>
                                         </div>
                                     </div>
                                     <div class="text-right">
                                         <Badge :class="getDeliveryStatusClass(slot.status)" class="text-xs">
-                                            {{ slot.status }}
+                                            {{ slot.status.replace('_', ' ') }}
                                         </Badge>
-                                        <p class="mt-1 text-xs text-gray-600">{{ slot.completed }}/{{ slot.orders }} completed</p>
+                                        <p class="mt-1 text-xs text-gray-600">{{ slot.completed }}/{{ slot.total_orders }} completed</p>
                                     </div>
+                                </div>
+                                <div v-if="deliverySchedule.length === 0" class="py-4 text-center text-gray-500">
+                                    <Truck class="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                                    <p class="text-sm">No deliveries scheduled for today</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -289,7 +307,10 @@
                                         <span class="text-sm font-semibold">{{ performance.fulfillmentRate }}%</span>
                                     </div>
                                     <div class="h-2 w-full rounded-full bg-gray-200">
-                                        <div class="h-2 rounded-full bg-green-600" :style="{ width: performance.fulfillmentRate + '%' }"></div>
+                                        <div
+                                            class="h-2 rounded-full bg-green-600 transition-all duration-300"
+                                            :style="{ width: performance.fulfillmentRate + '%' }"
+                                        ></div>
                                     </div>
                                 </div>
 
@@ -300,7 +321,10 @@
                                         <span class="text-sm font-semibold">{{ performance.onTimeDelivery }}%</span>
                                     </div>
                                     <div class="h-2 w-full rounded-full bg-gray-200">
-                                        <div class="h-2 rounded-full bg-blue-600" :style="{ width: performance.onTimeDelivery + '%' }"></div>
+                                        <div
+                                            class="h-2 rounded-full bg-blue-600 transition-all duration-300"
+                                            :style="{ width: performance.onTimeDelivery + '%' }"
+                                        ></div>
                                     </div>
                                 </div>
 
@@ -311,7 +335,10 @@
                                         <span class="text-sm font-semibold">{{ performance.customerSatisfaction }}%</span>
                                     </div>
                                     <div class="h-2 w-full rounded-full bg-gray-200">
-                                        <div class="h-2 rounded-full bg-purple-600" :style="{ width: performance.customerSatisfaction + '%' }"></div>
+                                        <div
+                                            class="h-2 rounded-full bg-purple-600 transition-all duration-300"
+                                            :style="{ width: performance.customerSatisfaction + '%' }"
+                                        ></div>
                                     </div>
                                 </div>
 
@@ -322,7 +349,10 @@
                                         <span class="text-sm font-semibold">{{ performance.kitchenEfficiency }}%</span>
                                     </div>
                                     <div class="h-2 w-full rounded-full bg-gray-200">
-                                        <div class="h-2 rounded-full bg-orange-600" :style="{ width: performance.kitchenEfficiency + '%' }"></div>
+                                        <div
+                                            class="h-2 rounded-full bg-orange-600 transition-all duration-300"
+                                            :style="{ width: performance.kitchenEfficiency + '%' }"
+                                        ></div>
                                     </div>
                                 </div>
                             </div>
@@ -354,6 +384,10 @@
                                     <p class="mt-1 text-xs text-gray-500">{{ activity.time }}</p>
                                 </div>
                             </div>
+                            <div v-if="recentActivity.length === 0" class="py-4 text-center text-gray-500">
+                                <Clock class="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                                <p class="text-sm">No recent activity</p>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -363,14 +397,16 @@
 </template>
 
 <script setup lang="ts">
+import RevenueChart from '@/components/Admin/RevenueChart.vue';
+import SubscriptionChart from '@/components/Admin/SubscriptionChart.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
     AlertTriangle,
-    BarChart3,
     Clock,
     DollarSign,
     Package,
@@ -378,6 +414,7 @@ import {
     RefreshCw,
     ShoppingCart,
     Star,
+    TrendingDown,
     TrendingUp,
     Truck,
     UserPlus,
@@ -386,7 +423,7 @@ import {
 import { computed, onMounted, ref } from 'vue';
 
 // Props from backend
-defineProps<{
+const props = defineProps<{
     stats: {
         totalRevenue: number;
         revenueGrowth: number;
@@ -401,21 +438,23 @@ defineProps<{
         id: number;
         customer: string;
         plan: string;
-        time: string;
+        created_at: string;
         status: string;
+        total_amount: number;
     }>;
     lowStockItems: Array<{
         id: number;
         name: string;
         current: number;
+        minimum: number;
         unit: string;
         status: string;
     }>;
     deliverySchedule: Array<{
         time: string;
         period: string;
-        orders: number;
-        drivers: number;
+        total_orders: number;
+        drivers_assigned: number;
         status: string;
         completed: number;
     }>;
@@ -426,16 +465,47 @@ defineProps<{
         kitchenEfficiency: number;
     };
     recentActivity: Array<{
-        id: number;
+        id: string;
         type: string;
         title: string;
         description: string;
         time: string;
     }>;
+    revenueChart: {
+        labels: string[];
+        datasets: Array<{
+            label: string;
+            data: number[];
+            borderColor: string;
+            backgroundColor: string;
+            tension: number;
+            fill: boolean;
+        }>;
+    };
+    subscriptionGrowth: {
+        labels: string[];
+        datasets: Array<{
+            label: string;
+            data: number[];
+            borderColor: string;
+            backgroundColor: string;
+            tension: number;
+            fill: boolean;
+        }>;
+    };
 }>();
 
 // Reactive data
 const revenueFilter = ref('30');
+const subscriptionFilter = ref('30');
+const refreshing = ref(false);
+const chartLoading = ref({
+    revenue: false,
+    subscription: false,
+});
+
+const revenueChartData = ref(props.revenueChart);
+const subscriptionChartData = ref(props.subscriptionGrowth);
 
 // Computed properties
 const currentDate = computed(() => {
@@ -457,20 +527,61 @@ const formatCurrency = (amount: number) => {
     }).format(amount);
 };
 
-const navigateTo = (routeName: string) => {
-    router.visit(route(routeName));
+const navigateTo = (routeName: string, params?: any) => {
+    if (params) {
+        router.visit(route(routeName, params));
+    } else {
+        router.visit(route(routeName));
+    }
 };
 
-const refreshData = () => {
-    router.reload();
+const refreshData = async () => {
+    refreshing.value = true;
+    try {
+        await axios.post(route('admin.dashboard.refresh'));
+        router.reload({ only: ['stats', 'recentOrders', 'lowStockItems', 'deliverySchedule', 'performance', 'recentActivity'] });
+    } catch (error) {
+        console.error('Failed to refresh data:', error);
+    } finally {
+        refreshing.value = false;
+    }
+};
+
+const updateRevenueChart = async () => {
+    chartLoading.value.revenue = true;
+    try {
+        const response = await axios.get(route('admin.dashboard.chart-data'), {
+            params: { type: 'revenue', period: revenueFilter.value },
+        });
+        revenueChartData.value = response.data;
+    } catch (error) {
+        console.error('Failed to update revenue chart:', error);
+    } finally {
+        chartLoading.value.revenue = false;
+    }
+};
+
+const updateSubscriptionChart = async () => {
+    chartLoading.value.subscription = true;
+    try {
+        const response = await axios.get(route('admin.dashboard.chart-data'), {
+            params: { type: 'subscriptions', period: subscriptionFilter.value },
+        });
+        subscriptionChartData.value = response.data;
+    } catch (error) {
+        console.error('Failed to update subscription chart:', error);
+    } finally {
+        chartLoading.value.subscription = false;
+    }
 };
 
 const getOrderStatusClass = (status: string) => {
     const classes = {
-        pending: 'bg-orange-100 text-orange-800',
+        pending: 'bg-yellow-100 text-yellow-800',
         confirmed: 'bg-blue-100 text-blue-800',
-        preparing: 'bg-yellow-100 text-yellow-800',
+        preparing: 'bg-orange-100 text-orange-800',
         ready: 'bg-purple-100 text-purple-800',
+        out_for_delivery: 'bg-indigo-100 text-indigo-800',
         delivered: 'bg-green-100 text-green-800',
         cancelled: 'bg-red-100 text-red-800',
     };
@@ -480,21 +591,11 @@ const getOrderStatusClass = (status: string) => {
 const getDeliveryStatusClass = (status: string) => {
     const classes = {
         on_schedule: 'bg-green-100 text-green-800',
-        delayed: 'bg-orange-100 text-orange-800',
+        behind_schedule: 'bg-yellow-100 text-yellow-800',
+        delayed: 'bg-red-100 text-red-800',
         completed: 'bg-blue-100 text-blue-800',
     };
     return classes[status as keyof typeof classes] || 'bg-gray-100 text-gray-800';
-};
-
-const getActivityIconClass = (type: string) => {
-    const classes = {
-        order: 'bg-blue-100 text-blue-600',
-        user: 'bg-green-100 text-green-600',
-        payment: 'bg-yellow-100 text-yellow-600',
-        delivery: 'bg-purple-100 text-purple-600',
-        review: 'bg-pink-100 text-pink-600',
-    };
-    return classes[type as keyof typeof classes] || 'bg-gray-100 text-gray-600';
 };
 
 const getActivityIcon = (type: string) => {
@@ -502,13 +603,29 @@ const getActivityIcon = (type: string) => {
         order: ShoppingCart,
         user: UserPlus,
         payment: DollarSign,
-        delivery: Truck,
         review: Star,
+        delivery: Truck,
     };
     return icons[type as keyof typeof icons] || Clock;
 };
 
+const getActivityIconClass = (type: string) => {
+    const classes = {
+        order: 'bg-blue-100 text-blue-600',
+        user: 'bg-green-100 text-green-600',
+        payment: 'bg-yellow-100 text-yellow-600',
+        review: 'bg-purple-100 text-purple-600',
+        delivery: 'bg-indigo-100 text-indigo-600',
+    };
+    return classes[type as keyof typeof classes] || 'bg-gray-100 text-gray-600';
+};
+
 onMounted(() => {
-    // Initialize any charts or real-time data here
+    // Auto-refresh data every 5 minutes
+    setInterval(() => {
+        if (!refreshing.value) {
+            refreshData();
+        }
+    }, 300000); // 5 minutes
 });
 </script>
