@@ -26,6 +26,8 @@ class Order extends Model
         'discount_amount',
         'total_amount',
         'special_instructions',
+        'confirmed_at',
+        'delivered_at',
         'status',
         'payment_status',
         'payment_method',
@@ -38,6 +40,8 @@ class Order extends Model
         'delivery_fee' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'confirmed_at' => 'datetime',
+        'delivered_at' => 'datetime',
     ];
     protected $appends = ['can_pay'];
 
@@ -105,21 +109,43 @@ class Order extends Model
             in_array($this->payment_status, ['unpaid', 'pending']);
     }
 
-    public function getCustomerNameAttribute()
+
+    public function     getCustomerNameAttribute()
     {
-        if ($this->order_type === 'subscription' && $this->subscription) {
+        // Prioritize direct customer name, then subscription user, then order user
+        if (!empty($this->attributes['customer_name'])) {
+            return $this->attributes['customer_name'];
+        }
+
+        if ($this->order_type === 'subscription' && $this->subscription && $this->subscription->user) {
             return $this->subscription->user->name;
         }
-        return $this->attributes['customer_name'] ?? $this->user->name;
+
+        if ($this->user) {
+            return $this->user->name;
+        }
+
+        return 'Unknown Customer';
     }
 
     public function getCustomerEmailAttribute()
     {
-        if ($this->order_type === 'subscription' && $this->subscription) {
+        // Prioritize direct customer email, then subscription user, then order user
+        if (!empty($this->attributes['customer_email'])) {
+            return $this->attributes['customer_email'];
+        }
+
+        if ($this->order_type === 'subscription' && $this->subscription && $this->subscription->user) {
             return $this->subscription->user->email;
         }
-        return $this->attributes['customer_email'] ?? $this->user->email;
+
+        if ($this->user) {
+            return $this->user->email;
+        }
+
+        return 'unknown@email.com';
     }
+
 
     public function getIsDirectOrderAttribute()
     {

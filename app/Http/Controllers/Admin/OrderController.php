@@ -13,24 +13,40 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'subscription.user', 'subscription.mealPlan', 'orderItems.menuItem', 'delivery.driver']);
+        $query = Order::with([
+            'user',
+            'subscription.user',
+            'subscription.mealPlan',
+            'orderItems.menuItem',
+            'delivery.driver',
+            'deliveryAddress'
+        ]);
 
         // Search
         if ($request->filled('search')) {
-            $query->where('order_number', 'like', '%' . $request->search . '%')
-                ->orWhereHas('user', function ($q) use ($request) {
-                    $q->where('name', 'like', '%' . $request->search . '%')
-                        ->orWhere('email', 'like', '%' . $request->search . '%');
-                });
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('order_number', 'like', '%' . $search . '%')
+                    ->orWhere('customer_name', 'like', '%' . $search . '%')
+                    ->orWhere('customer_email', 'like', '%' . $search . '%')
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('email', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('subscription.user', function ($subUserQuery) use ($search) {
+                        $subUserQuery->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('email', 'like', '%' . $search . '%');
+                    });
+            });
         }
 
         // Filter by status
-        if ($request->filled('status')) {
+        if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
         // Filter by order type
-        if ($request->filled('order_type')) {
+        if ($request->filled('order_type') && $request->order_type !== 'all') {
             $query->where('order_type', $request->order_type);
         }
 
@@ -57,12 +73,16 @@ class OrderController extends Controller
                     'order_type' => $order->order_type,
                     'customer_name' => $order->customer_name,
                     'customer_email' => $order->customer_email,
-                    'delivery_date' => $order->delivery_date,
+                    'order_source' => $order->order_source,
+                    'delivery_date' => $order->delivery_date->format('Y-m-d'),
                     'delivery_time_slot' => $order->delivery_time_slot,
                     'total_amount' => $order->total_amount,
                     'status' => $order->status,
                     'payment_status' => $order->payment_status,
-                    'created_at' => $order->created_at,
+                    'created_at' => $order->created_at->format('Y-m-d H:i:s'),
+                    'plan_name' => $order->subscription && $order->subscription->mealPlan
+                        ? $order->subscription->mealPlan->name
+                        : 'Direct Order',
                 ];
             });
 
@@ -74,7 +94,7 @@ class OrderController extends Controller
             'delivered_orders' => Order::where('status', 'delivered')->count(),
             'today_orders' => Order::whereDate('delivery_date', today())->count(),
             'subscription_orders' => Order::where('order_type', 'subscription')->count(),
-            'direct_orders' => Order::where('order_type', 'direct')->count(),
+            'direct_orders' => Order::where('order_type', 'one_time')->count(),
         ];
 
         return Inertia::render('Admin/OrderManagement', [
@@ -116,7 +136,8 @@ class OrderController extends Controller
                 'order_type' => $order->order_type,
                 'customer_name' => $order->customer_name,
                 'customer_email' => $order->customer_email,
-                'delivery_date' => $order->delivery_date,
+                'order_source' => $order->order_source,
+                'delivery_date' => $order->delivery_date->format('Y-m-d'),
                 'delivery_time_slot' => $order->delivery_time_slot,
                 'subtotal' => $order->subtotal,
                 'tax_amount' => $order->tax_amount,
@@ -125,19 +146,50 @@ class OrderController extends Controller
                 'special_instructions' => $order->special_instructions,
                 'status' => $order->status,
                 'payment_status' => $order->payment_status,
-                'created_at' => $order->created_at,
-                'delivery_address' => $order->deliveryAddress,
+                'created_at' => $order->created_at->format('Y-m-d H:i:s'),
+                'delivery_address' => $order->deliveryAddress ? [
+                    'id' => $order->deliveryAddress->id,
+                    'address_line_1' => $order->deliveryAddress->address_line_1,
+                    'address_line_2' => $order->deliveryAddress->address_line_2,
+                    'city' => $order->deliveryAddress->city,
+                    'state' => $order->deliveryAddress->state,
+                    'postal_code' => $order->deliveryAddress->postal_code,
+                    'country' => $order->deliveryAddress->country,
+                ] : null,
                 'order_items' => $order->orderItems->map(function ($item) {
                     return [
                         'id' => $item->id,
-                        'menu_item' => $item->menuItem,
+                        'menu_item' => $item->menuItem ? [
+                            'id' => $item->menuItem->id,
+                            'name' => $item->menuItem->name,
+                            'description' => $item->menuItem->description,
+                            'price' => $item->menuItem->price,
+                        ] : null,
                         'quantity' => $item->quantity,
-                        'price' => $item->price,
+                        'unit_price' => $item->unit_price,
                         'total_price' => $item->total_price,
+                        'special_instructions' => $item->special_instructions,
                     ];
                 }),
-                'payment' => $order->payment,
-                'delivery' => $order->delivery,
+                'payment' => $order->payment ? [
+                    'id' => $order->payment->id,
+                    'amount' => $order->payment->amount,
+                    'status' => $order->payment->status,
+                    'method' => $order->payment->method,
+                    'transaction_id' => $order->payment->transaction_id,
+                ] : null,
+                'delivery' => $order->delivery ? [
+                    'id' => $order->delivery->id,
+                    'tracking_number' => $order->delivery->tracking_number,
+                    'status' => $order->delivery->status,
+                    'driver' => $order->delivery->driver ? [
+                        'id' => $order->delivery->driver->id,
+                        'name' => $order->delivery->driver->name,
+                        'phone' => $order->delivery->driver->phone,
+                    ] : null,
+                    'picked_up_at' => $order->delivery->picked_up_at,
+                    'delivered_at' => $order->delivery->delivered_at,
+                ] : null,
             ]
         ]);
     }
@@ -149,7 +201,9 @@ class OrderController extends Controller
             'notes' => 'nullable|string'
         ]);
 
-        $order->update($validated);
+        $order->update([
+            'status' => $validated['status']
+        ]);
 
         // Create delivery record if status is out_for_delivery
         if ($validated['status'] === 'out_for_delivery' && !$order->delivery) {
@@ -157,8 +211,18 @@ class OrderController extends Controller
                 'driver_id' => $request->driver_id,
                 'tracking_number' => 'TRK-' . strtoupper(uniqid()),
                 'status' => 'in_transit',
-                'estimated_delivery' => now()->addHours(2)
             ]);
+        }
+
+        // Update delivered timestamp
+        if ($validated['status'] === 'delivered') {
+            $order->update(['delivered_at' => now()]);
+            if ($order->delivery) {
+                $order->delivery->update([
+                    'status' => 'delivered',
+                    'delivered_at' => now()
+                ]);
+            }
         }
 
         return redirect()->back()
@@ -178,7 +242,6 @@ class OrderController extends Controller
                 'driver_id' => $validated['driver_id'],
                 'tracking_number' => 'TRK-' . strtoupper(uniqid()),
                 'status' => 'assigned',
-                'estimated_delivery' => now()->addHours(2)
             ]);
         }
 

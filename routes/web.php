@@ -46,13 +46,13 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
         ->name('meal-plans.toggle-status');
 
     // Order Management
-    Route::resource('orders', OrderController::class)->only(['index', 'show']);
-    Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])
-        ->name('orders.update-status');
-    Route::patch('orders/{order}/assign-driver', [OrderController::class, 'assignDriver'])
-        ->name('orders.assign-driver');
-    Route::post('orders/bulk-update', [OrderController::class, 'bulkUpdateStatus'])
-        ->name('orders.bulk-update');
+    Route::prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [OrderController::class, 'index'])->name('index');
+        Route::get('/{order}', [OrderController::class, 'show'])->name('show');
+        Route::post('/{order}/update-status', [OrderController::class, 'updateStatus'])->name('update-status');
+        Route::post('/{order}/assign-driver', [OrderController::class, 'assignDriver'])->name('assign-driver');
+        Route::post('/bulk-update-status', [OrderController::class, 'bulkUpdateStatus'])->name('bulk-update-status');
+    });
 
     // User Management
     Route::resource('users', UserController::class);
@@ -75,9 +75,11 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
         ->name('inventory.expiring-items');
 
     // Subscription Management
-    Route::resource('subscriptions', SubscriptionController::class);
-    Route::patch('subscriptions/{subscription}/update-status', [SubscriptionController::class, 'updateStatus'])
-        ->name('subscriptions.update-status');
+    Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
+        Route::get('/', [SubscriptionController::class, 'index'])->name('index');
+        Route::get('/{subscription}', [SubscriptionController::class, 'show'])->name('show');
+        Route::post('/{subscription}/update-status', [SubscriptionController::class, 'updateStatus'])->name('update-status');
+    });
 
     // Plans Meal Management
     Route::resource('plans', MealPlanController::class);

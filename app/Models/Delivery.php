@@ -14,7 +14,6 @@ class Delivery extends Model
         'driver_id',
         'tracking_number',
         'pickup_time',
-        'estimated_delivery',
         'actual_delivery',
         'status',
         'delivery_notes',
@@ -22,7 +21,6 @@ class Delivery extends Model
 
     protected $casts = [
         'pickup_time' => 'datetime',
-        'estimated_delivery' => 'datetime',
         'actual_delivery' => 'datetime',
     ];
 

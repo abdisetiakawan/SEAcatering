@@ -14,8 +14,8 @@
             <div v-if="order" class="mb-6 rounded-lg bg-gray-50 p-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <h3 class="font-medium text-gray-900">Order #{{ order.id }}</h3>
-                        <p class="text-sm text-gray-600">{{ order.subscription.user.name }}</p>
+                        <h3 class="font-medium text-gray-900">Order #{{ order.order_number }}</h3>
+                        <p class="text-sm text-gray-600">{{ order.customer_name }}</p>
                         <p class="text-sm text-gray-600">{{ formatDate(order.created_at) }}</p>
                     </div>
                     <div class="text-right">
@@ -49,29 +49,21 @@
                     </select>
                 </div>
 
-                <!-- Driver Assignment (for preparing/delivering status) -->
-                <div v-if="form.status === 'preparing' || form.status === 'delivering'" class="mb-4">
-                    <label class="mb-2 block text-sm font-medium text-gray-700">
-                        {{ form.status === 'preparing' ? 'Assign Chef' : 'Assign Driver' }}
-                    </label>
-                    <select v-model="form.assignedTo" class="w-full rounded-md border border-gray-300 px-3 py-2">
-                        <option value="">Select {{ form.status === 'preparing' ? 'chef' : 'driver' }}...</option>
-                        <option v-for="user in getAssignableUsers(form.status)" :key="user.id" :value="user.id">
-                            {{ user.name }} {{ user.phone ? `(${user.phone})` : '' }}
+                <!-- Driver Assignment (for out_for_delivery status) -->
+                <div v-if="form.status === 'out_for_delivery'" class="mb-4">
+                    <label class="mb-2 block text-sm font-medium text-gray-700">Assign Driver</label>
+                    <select v-model="form.driver_id" class="w-full rounded-md border border-gray-300 px-3 py-2">
+                        <option value="">Select driver...</option>
+                        <option v-for="driver in localDrivers" :key="driver.id" :value="driver.id">
+                            {{ driver.name }} {{ driver.phone ? `(${driver.phone})` : '' }}
                         </option>
                     </select>
-                </div>
-
-                <!-- Delivery Time (for delivering status) -->
-                <div v-if="form.status === 'delivering'" class="mb-4">
-                    <label class="mb-2 block text-sm font-medium text-gray-700">Estimated Delivery Time</label>
-                    <input type="datetime-local" v-model="form.estimatedDeliveryTime" class="w-full rounded-md border border-gray-300 px-3 py-2" />
                 </div>
 
                 <!-- Cancellation Reason (for cancelled status) -->
                 <div v-if="form.status === 'cancelled'" class="mb-4">
                     <label class="mb-2 block text-sm font-medium text-gray-700">Cancellation Reason</label>
-                    <select v-model="form.cancellationReason" class="mb-2 w-full rounded-md border border-gray-300 px-3 py-2">
+                    <select v-model="form.cancellation_reason" class="mb-2 w-full rounded-md border border-gray-300 px-3 py-2">
                         <option value="">Select reason...</option>
                         <option value="customer_request">Customer Request</option>
                         <option value="out_of_stock">Out of Stock</option>
@@ -80,8 +72,8 @@
                         <option value="other">Other</option>
                     </select>
                     <textarea
-                        v-if="form.cancellationReason === 'other' || form.customCancellationReason"
-                        v-model="form.customCancellationReason"
+                        v-if="form.cancellation_reason === 'other'"
+                        v-model="form.cancellation_notes"
                         rows="3"
                         class="w-full rounded-md border border-gray-300 px-3 py-2"
                         placeholder="Enter cancellation reason..."
@@ -97,14 +89,6 @@
                         class="w-full rounded-md border border-gray-300 px-3 py-2"
                         placeholder="Add any additional notes..."
                     ></textarea>
-                </div>
-
-                <!-- Send Notification -->
-                <div class="mb-6">
-                    <label class="flex items-center">
-                        <input type="checkbox" v-model="form.sendNotification" class="mr-2 text-blue-600" />
-                        <span class="text-sm text-gray-700">Send notification to customer</span>
-                    </label>
                 </div>
 
                 <!-- Actions -->
@@ -134,9 +118,9 @@ import Modal from '@/components/Modal.vue';
 import { router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 
-type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivering' | 'delivered' | 'cancelled';
+type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
 
-interface User {
+interface Driver {
     id: number;
     name: string;
     phone?: string;
@@ -145,20 +129,12 @@ interface User {
 interface Order {
     id: number;
     order_number: string;
+    customer_name: string;
     delivery_date: string;
     delivery_time_slot: string;
     total_amount: number;
     status: OrderStatus;
     created_at: string;
-    subscription: {
-        user: {
-            name: string;
-            email: string;
-        };
-        meal_plan: {
-            name: string;
-        };
-    };
 }
 
 interface StatusOption {
@@ -168,19 +144,16 @@ interface StatusOption {
 
 interface OrderStatusForm {
     status: OrderStatus | '';
-    assignedTo: number | string;
-    estimatedDeliveryTime: string;
-    cancellationReason: string;
-    customCancellationReason: string;
+    driver_id: number | '';
+    cancellation_reason: string;
+    cancellation_notes: string;
     notes: string;
-    sendNotification: boolean;
 }
 
 interface Props {
     show: boolean;
     order?: Order;
-    drivers?: User[];
-    chefs?: User[];
+    drivers?: Driver[];
 }
 
 interface Emits {
@@ -192,15 +165,18 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const processing = ref<boolean>(false);
+const localDrivers = ref<Driver[]>([
+    { id: 1, name: 'John Doe', phone: '081234567890' },
+    { id: 2, name: 'Jane Smith', phone: '081234567891' },
+    { id: 3, name: 'Bob Wilson', phone: '081234567892' },
+]);
 
 const form = ref<OrderStatusForm>({
     status: '',
-    assignedTo: '',
-    estimatedDeliveryTime: '',
-    cancellationReason: '',
-    customCancellationReason: '',
+    driver_id: '',
+    cancellation_reason: '',
+    cancellation_notes: '',
     notes: '',
-    sendNotification: true,
 });
 
 const statusOptions: StatusOption[] = [
@@ -208,7 +184,7 @@ const statusOptions: StatusOption[] = [
     { value: 'confirmed', label: 'Confirmed' },
     { value: 'preparing', label: 'Preparing' },
     { value: 'ready', label: 'Ready for Delivery' },
-    { value: 'delivering', label: 'Out for Delivery' },
+    { value: 'out_for_delivery', label: 'Out for Delivery' },
     { value: 'delivered', label: 'Delivered' },
     { value: 'cancelled', label: 'Cancelled' },
 ];
@@ -227,7 +203,7 @@ const getStatusClass = (status?: OrderStatus): string => {
         confirmed: 'text-blue-600',
         preparing: 'text-purple-600',
         ready: 'text-indigo-600',
-        delivering: 'text-orange-600',
+        out_for_delivery: 'text-orange-600',
         delivered: 'text-green-600',
         cancelled: 'text-red-600',
     };
@@ -241,23 +217,14 @@ const getAvailableStatuses = (currentStatus?: OrderStatus): StatusOption[] => {
         pending: ['confirmed', 'cancelled'],
         confirmed: ['preparing', 'cancelled'],
         preparing: ['ready', 'cancelled'],
-        ready: ['delivering', 'cancelled'],
-        delivering: ['delivered', 'cancelled'],
+        ready: ['out_for_delivery', 'cancelled'],
+        out_for_delivery: ['delivered', 'cancelled'],
         delivered: [],
         cancelled: [],
     };
 
     const availableStatuses = statusFlow[currentStatus] || [];
     return statusOptions.filter((option) => availableStatuses.includes(option.value));
-};
-
-const getAssignableUsers = (status: OrderStatus | ''): User[] => {
-    if (status === 'preparing') {
-        return props.chefs || [];
-    } else if (status === 'delivering') {
-        return props.drivers || [];
-    }
-    return [];
 };
 
 const formatPrice = (price: number): string => {
@@ -294,12 +261,10 @@ const submitUpdate = (): void => {
 const closeModal = (): void => {
     form.value = {
         status: '',
-        assignedTo: '',
-        estimatedDeliveryTime: '',
-        cancellationReason: '',
-        customCancellationReason: '',
+        driver_id: '',
+        cancellation_reason: '',
+        cancellation_notes: '',
         notes: '',
-        sendNotification: true,
     };
     emit('close');
 };

@@ -150,6 +150,15 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Empty State -->
+                    <div v-if="orders.data.length === 0" class="py-12 text-center">
+                        <div class="text-gray-500">
+                            <Package class="mx-auto mb-4 h-12 w-12" />
+                            <h3 class="mb-2 text-lg font-medium">No orders found</h3>
+                            <p>No orders match your current filters.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Pagination -->
@@ -160,13 +169,7 @@
         </div>
 
         <!-- Status Update Modal -->
-        <OrderStatusModal
-            :show="showStatusModal"
-            :order="selectedOrder"
-            :statusOptions="statusOptions"
-            @close="showStatusModal = false"
-            @updated="handleStatusUpdated"
-        />
+        <OrderStatusModal :show="showStatusModal" :order="selectedOrder" @close="showStatusModal = false" @updated="handleStatusUpdated" />
     </AdminLayout>
 </template>
 
@@ -179,7 +182,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Eye, RefreshCw, Search } from 'lucide-vue-next';
+import { Eye, Package, RefreshCw, Search } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
 
 type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
@@ -200,13 +203,19 @@ interface Order {
     plan_name: string;
 }
 
-const props = defineProps<{
-    orders: { data: Order[]; links: any[]; meta: any };
+interface Props {
+    orders: {
+        data: Order[];
+        links: any[];
+        meta: any;
+    };
     filters: Record<string, any>;
     stats: Record<string, number>;
     statusOptions: Record<string, string>;
     orderTypeOptions: Record<string, string>;
-}>();
+}
+
+const props = defineProps<Props>();
 
 // State
 const showStatusModal = ref(false);
@@ -273,7 +282,7 @@ const handleFilter = () => {
 
 const resetFilters = () => {
     Object.keys(filters).forEach((key) => {
-        filters[key as keyof typeof filters] = '';
+        filters[key as keyof typeof filters] = key === 'status' || key === 'order_type' ? 'all' : '';
     });
     router.get(route('admin.orders.index'));
 };
