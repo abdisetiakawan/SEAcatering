@@ -123,6 +123,7 @@
                         @cancel="handleCancel"
                         @modify="handleModify"
                         @view-details="handleViewDetails"
+                        @checkout="handleCheckout"
                     />
                 </div>
 
@@ -189,7 +190,17 @@ import { Head, router } from '@inertiajs/vue3';
 import { Calendar, CheckCircle, Pause, PiggyBank, Plus, RefreshCw, Search, Truck } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
 
+interface Order {
+    id: number;
+    order_number: string;
+    delivery_date: string;
+    status: string;
+    payment_status: string;
+    total_amount: number;
+    can_pay: boolean;
+}
 interface Subscription {
+    can_pay: boolean;
     id: number;
     subscription_number: string;
     meals_per_day: number;
@@ -217,6 +228,7 @@ interface Subscription {
     discount_amount: number;
     next_delivery_date: string;
     created_at: string;
+    latest_order: Order | null;
 }
 
 const props = defineProps<{
@@ -231,6 +243,7 @@ const props = defineProps<{
     subscriptionStatuses: Record<string, string>;
 }>();
 
+console.log(props.subscriptions.data[0].latest_order);
 // State
 const showPauseModal = ref(false);
 const showCancelModal = ref(false);
@@ -298,6 +311,10 @@ const handleResume = (subscription: Subscription) => {
             },
         },
     );
+};
+
+const handleCheckout = (subscription: Subscription) => {
+    router.visit(route('user.subscriptions.payment', subscription.id));
 };
 
 const handleCancel = (subscription: Subscription) => {

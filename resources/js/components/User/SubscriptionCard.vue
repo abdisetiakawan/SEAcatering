@@ -126,7 +126,18 @@
                 </Button>
 
                 <Button
-                    v-if="['active', 'paused'].includes(subscription.status)"
+                    v-if="subscription.latest_order && subscription.status === 'pending'"
+                    @click="$emit('checkout', subscription)"
+                    variant="default"
+                    size="sm"
+                    class="min-w-0 flex-1"
+                >
+                    <CreditCard class="mr-2 h-4 w-4" />
+                    Checkout
+                </Button>
+
+                <Button
+                    v-if="['pending', 'paused'].includes(subscription.status)"
                     @click="$emit('cancel', subscription)"
                     variant="outline"
                     size="sm"
@@ -144,37 +155,8 @@
 import SubscriptionStatusBadge from '@/components/User/SubscriptionStatusBadge.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Subscription } from '@/types/subscription';
 import { Clock, Eye, MapPin, Pause, Play, Settings, X } from 'lucide-vue-next';
-
-interface Subscription {
-    id: number;
-    subscription_number: string;
-    meals_per_day: number;
-    meal_plan: {
-        id: number;
-        name: string;
-        type: string;
-        price_per_meal: number;
-        image: string;
-    };
-    delivery_address?: {
-        id: number | null;
-        address_line_1: string;
-        city: string;
-        province?: string;
-        state?: string;
-    };
-    start_date: string;
-    end_date: string;
-    status: string;
-    frequency: string;
-    delivery_days: string[];
-    delivery_time_preference: string;
-    price_per_meal: number;
-    total_price: number;
-    discount_amount: number;
-    next_delivery_date: string | null;
-}
 
 defineProps<{
     subscription: Subscription;
@@ -186,6 +168,7 @@ defineEmits<{
     resume: [subscription: Subscription];
     cancel: [subscription: Subscription];
     modify: [subscription: Subscription];
+    checkout: [subscription: Subscription];
 }>();
 
 const formatPrice = (price: number) => {

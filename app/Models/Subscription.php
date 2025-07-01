@@ -71,6 +71,16 @@ class Subscription extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
+    }
+
+    public function latestOrder()
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function getPricePerMealAttribute()
     {
         return $this->mealPlan ? $this->mealPlan->price_per_meal : 0;
@@ -88,6 +98,26 @@ class Subscription extends Model
         return $weeklyAmount * 4.33; // Average weeks per month
     }
 
+    public function getIsActiveAttribute()
+    {
+        return $this->status === 'active';
+    }
+
+    public function getCanBePausedAttribute()
+    {
+        return $this->status === 'active';
+    }
+
+    public function getCanBeResumedAttribute()
+    {
+        return $this->status === 'paused';
+    }
+
+    public function getCanBeCancelledAttribute()
+    {
+        return in_array($this->status, ['active', 'paused']);
+    }
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
@@ -106,5 +136,23 @@ class Subscription extends Model
     public function scopeExpired($query)
     {
         return $query->where('status', 'expired');
+    }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+
+    // Boot method
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($subscription) {
+            if (!$subscription->subscription_number) {
+                $subscription->subscription_number = 'SUB-' . strtoupper(uniqid());
+            }
+        });
     }
 }
