@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\MenuItem;
+use App\Models\Review;
 use App\Models\UserAddress;
 use App\Models\Cart;
 use App\Models\Payment;
@@ -137,55 +138,84 @@ class OrderController extends Controller
             abort(403);
         }
 
+        // Load relationships
         $order->load([
-            'orderItems.menuItem',
-            'delivery.driver',
+            'orderItems.menuItem.category',
             'payment',
-            'deliveryAddress'
+            'delivery',
+            'user'
         ]);
+
+        // Add review information for each order item
+        $order->orderItems->each(function ($orderItem) use ($order) {
+            // Check if user can review this item (order delivered and no existing review)
+            $orderItem->can_review = $order->status === 'delivered' &&
+                !Review::where('user_id', auth()->id())
+                    ->where('order_id', $order->id)
+                    ->where('menu_item_id', $orderItem->menu_item_id)
+                    ->exists();
+
+            // Check if review exists
+            $review = Review::where('user_id', auth()->id())
+                ->where('order_id', $order->id)
+                ->where('menu_item_id', $orderItem->menu_item_id)
+                ->first();
+
+            $orderItem->has_review = $review !== null;
+            if ($review) {
+                $orderItem->review = [
+                    'id' => $review->id,
+                    'rating' => $review->rating,
+                    'comment' => $review->comment,
+                    'created_at' => $review->created_at->toISOString(),
+                ];
+            }
+        });
+
+        // Add computed properties
+        $order->can_be_cancelled = in_array($order->status, ['pending', 'confirmed']);
+        $order->can_pay = $order->payment_status === 'unpaid';
+
+        // Format delivery address
+        $deliveryAddress = [
+            'recipient_name' => $order->delivery_name ?? $order->user->name,
+            'phone_number' => $order->delivery_phone ?? $order->user->phone,
+            'full_address' => $order->delivery_address,
+        ];
 
         return Inertia::render('User/Orders/Show', [
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
-                'order_type' => $order->order_type,
+                'status' => $order->status,
+                'payment_status' => $order->payment_status,
                 'delivery_date' => $order->delivery_date?->format('Y-m-d'),
                 'delivery_time_slot' => $order->delivery_time_slot,
                 'subtotal' => $order->subtotal,
-                'tax_amount' => $order->tax_amount,
                 'delivery_fee' => $order->delivery_fee,
+                'tax_amount' => $order->tax_amount,
                 'total_amount' => $order->total_amount,
                 'special_instructions' => $order->special_instructions,
-                'status' => $order->status,
-                'payment_status' => $order->payment_status,
+                'created_at' => $order->created_at->toISOString(),
                 'can_be_cancelled' => $order->can_be_cancelled,
-                'can_pay' => $order->payment_status === 'unpaid',
-                'created_at' => $order->created_at->format('Y-m-d H:i:s'),
-                'delivery_address' => $order->deliveryAddress ? [
-                    'id' => $order->deliveryAddress->id,
-                    'recipient_name' => $order->deliveryAddress->recipient_name,
-                    'phone_number' => $order->deliveryAddress->phone_number,
-                    'address_line_1' => $order->deliveryAddress->address_line_1,
-                    'address_line_2' => $order->deliveryAddress->address_line_2,
-                    'city' => $order->deliveryAddress->city,
-                    'province' => $order->deliveryAddress->province,
-                    'postal_code' => $order->deliveryAddress->postal_code,
-                    'full_address' => $order->deliveryAddress->full_address,
-                    'delivery_instructions' => $order->deliveryAddress->delivery_instructions,
-                ] : null,
+                'can_pay' => $order->can_pay,
                 'order_items' => $order->orderItems->map(function ($item) {
                     return [
                         'id' => $item->id,
                         'quantity' => $item->quantity,
                         'unit_price' => $item->unit_price,
                         'total_price' => $item->total_price,
+                        'can_review' => $item->can_review,
+                        'has_review' => $item->has_review,
+                        'review' => $item->review ?? null,
                         'menu_item' => [
                             'id' => $item->menuItem->id,
                             'name' => $item->menuItem->name,
-                            'description' => $item->menuItem->description,
                             'image' => $item->menuItem->image,
-                            'category' => $item->menuItem->category,
-                        ]
+                            'category' => $item->menuItem->category ? [
+                                'name' => $item->menuItem->category,
+                            ] : null,
+                        ],
                     ];
                 }),
                 'payment' => $order->payment ? [
@@ -194,21 +224,11 @@ class OrderController extends Controller
                     'amount' => $order->payment->amount,
                     'status' => $order->payment->status,
                     'payment_method' => $order->payment->payment_method,
-                    'payment_date' => $order->payment->payment_date?->format('Y-m-d H:i:s'),
+                    'payment_date' => $order->payment->payment_date?->toISOString(),
                     'transaction_id' => $order->payment->transaction_id,
                     'notes' => $order->payment->notes,
                 ] : null,
-                'delivery' => $order->delivery ? [
-                    'id' => $order->delivery->id,
-                    'status' => $order->delivery->status,
-                    'tracking_number' => $order->delivery->tracking_number,
-                    'estimated_delivery' => $order->delivery->estimated_delivery?->format('Y-m-d H:i:s'),
-                    'delivered_at' => $order->delivery->delivered_at?->format('Y-m-d H:i:s'),
-                    'driver' => $order->delivery->driver ? [
-                        'name' => $order->delivery->driver->name,
-                        'phone' => $order->delivery->driver->phone,
-                    ] : null,
-                ] : null,
+                'delivery_address' => $deliveryAddress,
             ]
         ]);
     }

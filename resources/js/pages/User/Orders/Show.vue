@@ -82,7 +82,9 @@
                                 <div class="space-y-4">
                                     <div v-for="item in order.order_items" :key="item.id" class="flex items-center space-x-4 rounded-lg border p-4">
                                         <img
-                                            :src="item.menu_item.image.startsWith('http') ? item.menu_item.image : '/storage/' + item.menu_item.image"
+                                            :src="
+                                                item.menu_item.image?.startsWith('http') ? item.menu_item.image : '/storage/' + item.menu_item.image
+                                            "
                                             :alt="item.menu_item.name"
                                             class="h-20 w-20 rounded-lg object-cover"
                                         />
@@ -93,9 +95,41 @@
                                                 <span class="text-sm text-gray-600">Qty: {{ item.quantity }}</span>
                                                 <span class="text-sm text-gray-600">{{ formatCurrency(item.unit_price) }} each</span>
                                             </div>
+
+                                            <!-- Review Section -->
+                                            <div v-if="item.has_review" class="mt-3 rounded-md bg-yellow-50 p-3">
+                                                <div class="flex items-center space-x-2">
+                                                    <div class="flex">
+                                                        <Star
+                                                            v-for="i in 5"
+                                                            :key="i"
+                                                            :class="[
+                                                                'h-4 w-4',
+                                                                i <= item.review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300',
+                                                            ]"
+                                                        />
+                                                    </div>
+                                                    <span class="text-sm font-medium text-gray-900">{{ item.review.rating }}/5</span>
+                                                </div>
+                                                <p v-if="item.review.comment" class="mt-2 text-sm text-gray-700">{{ item.review.comment }}</p>
+                                                <p class="mt-1 text-xs text-gray-500">Direview pada {{ formatDate(item.review.created_at) }}</p>
+                                            </div>
                                         </div>
                                         <div class="text-right">
                                             <p class="text-lg font-semibold text-gray-900">{{ formatCurrency(item.total_price) }}</p>
+
+                                            <!-- Review Button -->
+                                            <div v-if="item.can_review" class="mt-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    @click="goToReview(item.menu_item.id)"
+                                                    class="text-blue-600 hover:text-blue-700"
+                                                >
+                                                    <Star class="mr-1 h-4 w-4" />
+                                                    Beri Review
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -233,14 +267,24 @@ import PaymentStatusBadge from '@/components/User/PaymentStatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import UserLayout from '@/layouts/UserLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { Banknote, Building2, CreditCard, Download, MessageCircle, Phone, RotateCcw, Smartphone, X } from 'lucide-vue-next';
+import { Banknote, Building2, CreditCard, Download, MessageCircle, Phone, RotateCcw, Smartphone, Star, X } from 'lucide-vue-next';
 import { ref } from 'vue';
+
+interface Review {
+    id: number;
+    rating: number;
+    comment?: string;
+    created_at: string;
+}
 
 interface OrderItem {
     id: number;
     quantity: number;
     unit_price: number;
     total_price: number;
+    can_review: boolean;
+    has_review: boolean;
+    review?: Review;
     menu_item: {
         id: number;
         name: string;
@@ -348,20 +392,15 @@ const cancelOrder = () => {
 };
 
 const reorderItems = () => {
-    props.order.order_items.forEach((item) => {
-        router.post(
-            route('user.cart.add'),
-            {
-                menu_item_id: item.menu_item.id,
-                quantity: item.quantity,
+    router.post(
+        route('user.orders.reorder', props.order.id),
+        {},
+        {
+            onSuccess: () => {
+                router.visit(route('user.cart.index'));
             },
-            {
-                preserveScroll: true,
-            },
-        );
-    });
-
-    router.visit(route('user.cart.index'));
+        },
+    );
 };
 
 const downloadInvoice = () => {
@@ -370,5 +409,9 @@ const downloadInvoice = () => {
 
 const payOrder = () => {
     router.visit(route('user.orders.payment', props.order.id));
+};
+
+const goToReview = (menuItemId: number) => {
+    router.visit(route('user.reviews.create', [props.order.id, menuItemId]));
 };
 </script>

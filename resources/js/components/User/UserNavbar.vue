@@ -101,7 +101,6 @@
 
                         <!-- User Dropdown Menu -->
                         <div v-if="showUserMenu" class="absolute right-0 z-50 mt-2 w-48 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
-
                             <Link :href="route('user.orders.index')" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                 <Package class="mr-2 h-4 w-4" />
                                 My Orders
@@ -238,6 +237,7 @@ const userNavItems = [
     { label: 'Meal Plans', href: 'user.meal-plans.index', active: 'user.meal-plans.*' },
     { label: 'My Orders', href: 'user.orders.index', active: 'user.orders.*' },
     { label: 'My Subscriptions', href: 'user.subscriptions.index', active: 'user.subscriptions.*' },
+    { label: 'My Reviews ', href: 'user.reviews.index', active: 'user.reviews.*' },
 ];
 
 // Methods

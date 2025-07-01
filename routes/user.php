@@ -76,12 +76,12 @@ Route::middleware(['auth', 'verified'])->prefix('user')->name('user.')->group(fu
     });
 
     // Addresses
-    Route::prefix('addresses')->name('addresses.')->group(function () {
-        Route::get('/', [AddressController::class, 'index'])->name('index');
-        Route::post('/', [AddressController::class, 'store'])->name('store');
-        Route::put('/{address}', [AddressController::class, 'update'])->name('update');
-        Route::delete('/{address}', [AddressController::class, 'destroy'])->name('destroy');
-        Route::patch('/{address}/set-default', [AddressController::class, 'setDefault'])->name('set-default');
+    Route::prefix('reviews')->name('reviews.')->group(function () {
+        Route::get('/', [ReviewController::class, 'index'])->name('index');
+        Route::get('/create/{order}/{menuItem}', [ReviewController::class, 'create'])->name('create');
+        Route::post('/', [ReviewController::class, 'store'])->name('store');
+        Route::put('/{review}', [ReviewController::class, 'update'])->name('update');
+        Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
     });
 
     // Reviews

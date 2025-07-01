@@ -207,12 +207,12 @@ interface Order {
     tax_amount: number;
     delivery_fee: number;
     total_amount: number;
-    payment_status: string;
-    can_pay: boolean;
     status: string;
+    payment_status: string;
     special_instructions?: string;
     created_at: string;
     can_be_cancelled: boolean;
+    can_pay: boolean;
     order_items: OrderItem[];
     delivery_address: DeliveryAddress | null;
     payment: Payment | null;
@@ -239,7 +239,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-console.log(props.orders.data);
 
 // State
 const showCancelModal = ref(false);

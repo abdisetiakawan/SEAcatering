@@ -1,21 +1,31 @@
 <template>
     <Dialog :open="show" @update:open="$emit('close')">
-        <DialogContent class="sm:max-w-md">
+        <DialogContent class="max-w-md">
             <DialogHeader>
-                <DialogTitle>Write a Review</DialogTitle>
-                <DialogDescription> Share your experience with {{ menuItem.name }} </DialogDescription>
+                <DialogTitle>{{ isEditing ? 'Edit Review' : 'Write Review' }}</DialogTitle>
+                <DialogDescription>
+                    {{ isEditing ? 'Update your review' : 'Share your experience with this item' }}
+                </DialogDescription>
             </DialogHeader>
 
             <form @submit.prevent="submitReview" class="space-y-4">
                 <!-- Rating -->
                 <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700">Rating</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Rating *</label>
                     <div class="flex items-center space-x-1">
-                        <button v-for="i in 5" :key="i" type="button" @click="form.rating = i" class="focus:outline-none">
+                        <button
+                            v-for="i in 5"
+                            :key="i"
+                            type="button"
+                            @click="form.rating = i"
+                            class="focus:outline-none"
+                        >
                             <Star
                                 :class="[
-                                    'h-8 w-8 transition-colors',
-                                    i <= form.rating ? 'fill-current text-yellow-400' : 'text-gray-300 hover:text-yellow-200',
+                                    'h-6 w-6 transition-colors',
+                                    i <= form.rating
+                                        ? 'fill-current text-yellow-400'
+                                        : 'text-gray-300 hover:text-yellow-200',
                                 ]"
                             />
                         </button>
@@ -27,11 +37,13 @@
 
                 <!-- Comment -->
                 <div>
-                    <label for="comment" class="mb-2 block text-sm font-medium text-gray-700"> Comment </label>
+                    <label for="comment" class="block text-sm font-medium text-gray-700 mb-2">
+                        Comment (Optional)
+                    </label>
                     <textarea
                         id="comment"
                         v-model="form.comment"
-                        rows="4"
+                        rows="3"
                         class="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                         placeholder="Tell us about your experience..."
                     ></textarea>
@@ -41,9 +53,15 @@
                 </div>
 
                 <DialogFooter>
-                    <Button type="button" variant="outline" @click="$emit('close')"> Cancel </Button>
-                    <Button type="submit" :disabled="isSubmitting" class="bg-green-600 hover:bg-green-700">
-                        {{ isSubmitting ? 'Submitting...' : 'Submit Review' }}
+                    <Button type="button" variant="outline" @click="$emit('close')">
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        :disabled="isSubmitting || form.rating === 0"
+                        class="bg-green-600 hover:bg-green-700"
+                    >
+                        {{ isSubmitting ? 'Submitting...' : (isEditing ? 'Update Review' : 'Submit Review') }}
                     </Button>
                 </DialogFooter>
             </form>
@@ -56,23 +74,25 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { router } from '@inertiajs/vue3';
 import { Star } from 'lucide-vue-next';
-import { reactive, ref } from 'vue';
-import { route } from 'ziggy-js';
+import { computed, reactive, ref, watch } from 'vue';
 
-interface MenuItem {
+interface Review {
     id: number;
-    name: string;
+    rating: number;
+    comment?: string;
 }
 
 const props = defineProps<{
     show: boolean;
-    menuItem: MenuItem;
+    review?: Review | null;
 }>();
 
 const emit = defineEmits<{
     close: [];
-    submitted: [];
+    updated: [];
 }>();
+
+const isEditing = computed(() => !!props.review);
 
 const form = reactive({
     rating: 0,
@@ -82,14 +102,31 @@ const form = reactive({
 const errors = ref<Record<string, string>>({});
 const isSubmitting = ref(false);
 
+// Watch for review prop changes to populate form
+watch(() => props.review, (newReview) => {
+    if (newReview) {
+        form.rating = newReview.rating;
+        form.comment = newReview.comment || '';
+    } else {
+        form.rating = 0;
+        form.comment = '';
+    }
+}, { immediate: true });
+
+// Reset form when modal closes
+watch(() => props.show, (isOpen) => {
+    if (!isOpen) {
+        errors.value = {};
+        if (!isEditing.value) {
+            form.rating = 0;
+            form.comment = '';
+        }
+    }
+});
+
 const submitReview = async () => {
     if (form.rating === 0) {
         errors.value.rating = 'Please select a rating';
-        return;
-    }
-
-    if (!form.comment.trim()) {
-        errors.value.comment = 'Please write a comment';
         return;
     }
 
@@ -97,25 +134,27 @@ const submitReview = async () => {
     errors.value = {};
 
     try {
-        await router.post(
-            route('user.reviews.store'),
-            {
-                menu_item_id: props.menuItem.id,
-                rating: form.rating,
-                comment: form.comment,
-            },
-            {
+        if (isEditing.value && props.review) {
+            await router.put(`/user/reviews/${props.review.id}`, form, {
                 preserveScroll: true,
                 onSuccess: () => {
-                    form.rating = 0;
-                    form.comment = '';
-                    emit('submitted');
+                    emit('updated');
                 },
                 onError: (responseErrors) => {
                     errors.value = responseErrors;
                 },
-            },
-        );
+            });
+        } else {
+            await router.post('/user/reviews', form, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    emit('updated');
+                },
+                onError: (responseErrors) => {
+                    errors.value = responseErrors;
+                },
+            });
+        }
     } finally {
         isSubmitting.value = false;
     }

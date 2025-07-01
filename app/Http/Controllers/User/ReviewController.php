@@ -115,4 +115,136 @@ class ReviewController extends Controller
 
         return back()->with('success', 'Review deleted successfully!');
     }
+    public function create(Order $order, MenuItem $menuItem)
+    {
+        // Ensure user can only review their own orders
+        if ($order->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized access to order');
+        }
+
+        // Verify order is delivered
+        if ($order->status !== 'delivered') {
+            return redirect()->route('user.orders.show', $order->id)
+                ->with('error', 'You can only review items from delivered orders.');
+        }
+
+        // Verify menu item was in the order
+        $orderItem = $order->orderItems()
+            ->where('menu_item_id', $menuItem->id)
+            ->first();
+
+        if (!$orderItem) {
+            return redirect()->route('user.orders.show', $order->id)
+                ->with('error', 'This item was not in your order.');
+        }
+
+        // Check if review already exists
+        $existingReview = Review::where('user_id', auth()->id())
+            ->where('order_id', $order->id)
+            ->where('menu_item_id', $menuItem->id)
+            ->first();
+
+        if ($existingReview) {
+            return redirect()->route('user.orders.show', $order->id)
+                ->with('error', 'You have already reviewed this item.');
+        }
+
+        // Load menu item with category and recent reviews
+        $menuItem->load(['category']);
+
+        // Get recent reviews for this menu item
+        $recentReviews = Review::where('menu_item_id', $menuItem->id)
+            ->where('is_published', true)
+            ->with('user:id,name')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        // Calculate average rating
+        $averageRating = Review::where('menu_item_id', $menuItem->id)
+            ->where('is_published', true)
+            ->avg('rating') ?: 0;
+
+        $totalReviews = Review::where('menu_item_id', $menuItem->id)
+            ->where('is_published', true)
+            ->count();
+
+        return Inertia::render('User/Reviews/Create', [
+            'order' => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'delivery_date' => $order->delivery_date?->format('Y-m-d'),
+                'status' => $order->status,
+            ],
+            'menuItem' => [
+                'id' => $menuItem->id,
+                'name' => $menuItem->name,
+                'description' => $menuItem->description,
+                'image' => $menuItem->image,
+                'price' => $menuItem->price,
+                'category' => $menuItem->category ? [
+                    'name' => $menuItem->category,
+                ] : null,
+                'average_rating' => round($averageRating, 1),
+                'total_reviews' => $totalReviews,
+            ],
+            'orderItem' => [
+                'id' => $orderItem->id,
+                'quantity' => $orderItem->quantity,
+                'unit_price' => $orderItem->unit_price,
+                'total_price' => $orderItem->total_price,
+            ],
+            'recentReviews' => $recentReviews->map(function ($review) {
+                return [
+                    'id' => $review->id,
+                    'rating' => $review->rating,
+                    'comment' => $review->comment,
+                    'created_at' => $review->created_at->format('d M Y'),
+                    'user' => [
+                        'name' => $review->user->name,
+                    ]
+                ];
+            })
+        ]);
+    }
+    public function canReview(Order $order, MenuItem $menuItem)
+    {
+        // Check if user owns the order
+        if ($order->user_id !== auth()->id()) {
+            return false;
+        }
+
+        // Check if order is delivered
+        if ($order->status !== 'delivered') {
+            return false;
+        }
+
+        // Check if menu item was in the order
+        $orderItem = $order->orderItems()
+            ->where('menu_item_id', $menuItem->id)
+            ->first();
+
+        if (!$orderItem) {
+            return false;
+        }
+
+        // Check if review already exists
+        $existingReview = Review::where('user_id', auth()->id())
+            ->where('order_id', $order->id)
+            ->where('menu_item_id', $menuItem->id)
+            ->first();
+
+        return !$existingReview;
+    }
+
+    /**
+     * Get review for a specific order item
+     */
+    public function getReview(Order $order, MenuItem $menuItem)
+    {
+        return Review::where('user_id', auth()->id())
+            ->where('order_id', $order->id)
+            ->where('menu_item_id', $menuItem->id)
+            ->first();
+    }
 }
