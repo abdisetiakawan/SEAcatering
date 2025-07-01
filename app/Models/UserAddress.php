@@ -45,6 +45,16 @@ class UserAddress extends Model
         return $this->hasMany(Order::class, 'delivery_address_id');
     }
 
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class, 'user_address_id');
+    }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
     public function deliveries()
     {
         return $this->hasMany(Delivery::class, 'delivery_address_id');
@@ -64,8 +74,8 @@ class UserAddress extends Model
     // Mutators
     public function setIsDefaultAttribute($value)
     {
-        if ($value) {
-            // Set other addresses as non-default
+        if ($value && $this->user_id) {
+            // Set other addresses as non-default for this user
             static::where('user_id', $this->user_id)
                 ->where('id', '!=', $this->id ?? 0)
                 ->update(['is_default' => false]);
@@ -89,6 +99,42 @@ class UserAddress extends Model
 
     public function getFormattedPhoneAttribute()
     {
-        return preg_replace('/(\d{3})(\d{3})(\d{4})/', '($1) $2-$3', $this->phone_number);
+        $phone = preg_replace('/\D/', '', $this->phone_number);
+
+        if (strlen($phone) >= 10) {
+            if (substr($phone, 0, 2) === '08') {
+                return preg_replace('/(\d{4})(\d{4})(\d{4})/', '$1-$2-$3', $phone);
+            } elseif (substr($phone, 0, 3) === '628') {
+                return '+62 ' . preg_replace('/(\d{3})(\d{4})(\d{4})/', '$1-$2-$3', substr($phone, 2));
+            }
+        }
+
+        return $this->phone_number;
+    }
+
+    // Boot method to handle model events
+    protected static function boot()
+    {
+        parent::boot();
+
+        // When creating a new address, if it's the first one for the user, make it default
+        static::creating(function ($address) {
+            if ($address->user_id && !$address->user->addresses()->exists()) {
+                $address->is_default = true;
+            }
+        });
+
+        // When deleting an address, if it was default, set another as default
+        static::deleting(function ($address) {
+            if ($address->is_default) {
+                $nextAddress = $address->user->addresses()
+                    ->where('id', '!=', $address->id)
+                    ->first();
+
+                if ($nextAddress) {
+                    $nextAddress->update(['is_default' => true]);
+                }
+            }
+        });
     }
 }

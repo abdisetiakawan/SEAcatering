@@ -86,12 +86,6 @@
             <!-- Usage Stats -->
             <div class="flex items-center justify-between border-t border-gray-100 pt-4 text-xs text-gray-500">
                 <span>Dibuat {{ formatDate(address.created_at) }}</span>
-                <div class="flex items-center space-x-4">
-                    <span class="flex items-center">
-                        <Package class="mr-1 h-3 w-3" />
-                        {{ getOrderCount(address.id) }} pesanan
-                    </span>
-                </div>
             </div>
         </div>
 
@@ -121,7 +115,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Building, Edit, Home, MapPin, MessageSquare, MoreVertical, Package, Phone, Star, Trash2, User } from 'lucide-vue-next';
+import { Building, Edit, Home, MapPin, MessageSquare, MoreVertical, Phone, Star, Trash2, User } from 'lucide-vue-next';
 
 interface UserAddress {
     id: number;
@@ -135,7 +129,7 @@ interface UserAddress {
     postal_code: string;
     country: string;
     delivery_instructions?: string;
-    address_type: 'residential' | 'commercial' | 'apartment';
+    address_type: 'home' | 'office' | 'other';
     is_default: boolean;
     created_at: string;
     updated_at: string;
@@ -181,9 +175,16 @@ const getTypeLabel = (type: string) => {
 
 const formatPhoneNumber = (phone: string) => {
     // Format Indonesian phone number
-    if (phone.startsWith('08')) {
-        return phone.replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3');
+    const cleaned = phone.replace(/\D/g, '');
+
+    if (cleaned.length >= 10) {
+        if (cleaned.startsWith('08')) {
+            return cleaned.replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3');
+        } else if (cleaned.startsWith('628')) {
+            return '+62 ' + cleaned.substring(2).replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+        }
     }
+
     return phone;
 };
 
@@ -193,9 +194,5 @@ const formatDate = (dateString: string) => {
         month: 'short',
         year: 'numeric',
     });
-};
-
-const getOrderCount = (addressId: number) => {
-    return Math.floor(Math.random() * 20);
 };
 </script>

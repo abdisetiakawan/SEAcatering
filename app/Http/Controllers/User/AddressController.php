@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\UserAddress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AddressController extends Controller
@@ -35,7 +36,7 @@ class AddressController extends Controller
             'postal_code' => 'required|string|max:10',
             'country' => 'required|string|max:255',
             'delivery_instructions' => 'nullable|string',
-            'address_type' => 'required|in:residential,commercial,apartment',
+            'address_type' => ['required', Rule::in(['home', 'office', 'other'])],
             'is_default' => 'boolean',
         ]);
 
@@ -72,7 +73,7 @@ class AddressController extends Controller
             'postal_code' => 'required|string|max:10',
             'country' => 'required|string|max:255',
             'delivery_instructions' => 'nullable|string',
-            'address_type' => 'required|in:residential,commercial,apartment',
+            'address_type' => ['required', Rule::in(['home', 'office', 'other'])],
             'is_default' => 'boolean',
         ]);
 

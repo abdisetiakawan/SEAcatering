@@ -16,7 +16,7 @@
                         <div
                             v-for="type in addressTypes"
                             :key="type.value"
-                            @click="form.address_type = type.value as 'residential' | 'commercial' | 'apartment'"
+                            @click="setAddressType(type.value)"
                             class="relative cursor-pointer rounded-lg border p-4 text-center transition-colors hover:bg-gray-50"
                             :class="form.address_type === type.value ? 'border-green-500 bg-green-50' : 'border-gray-200'"
                         >
@@ -213,7 +213,7 @@ interface UserAddress {
     postal_code: string;
     country: string;
     delivery_instructions?: string;
-    address_type: 'residential' | 'commercial' | 'apartment';
+    address_type: 'home' | 'office' | 'other';
     is_default: boolean;
 }
 
@@ -245,15 +245,15 @@ const form = reactive<UserAddress>({
     postal_code: '',
     country: 'Indonesia',
     delivery_instructions: '',
-    address_type: 'residential',
+    address_type: 'home',
     is_default: false,
 });
 
 // Address types
 const addressTypes = [
-    { value: 'residential', label: 'Rumah', icon: Home },
-    { value: 'commercial', label: 'Kantor', icon: Building2 },
-    { value: 'apartment', label: 'Apartemen', icon: Landmark },
+    { value: 'home' as const, label: 'Rumah', icon: Home },
+    { value: 'office' as const, label: 'Kantor', icon: Building2 },
+    { value: 'other' as const, label: 'Lainnya', icon: Landmark },
 ];
 
 // Indonesian provinces
@@ -314,10 +314,8 @@ const saveAddress = async () => {
     try {
         if (isEditing.value) {
             router.put(route('user.addresses.update', props.address!.id), form, {
-                onSuccess: (page) => {
-                    // Assuming the response contains the updated address
-                    const updatedAddress = page.props.address || ({ ...form, id: props.address!.id } as UserAddress);
-                    emit('saved', updatedAddress);
+                onSuccess: () => {
+                    emit('saved', form);
                     emit('close');
                 },
                 onError: (errors) => {
@@ -329,10 +327,8 @@ const saveAddress = async () => {
             });
         } else {
             router.post(route('user.addresses.store'), form, {
-                onSuccess: (page) => {
-                    // Assuming the response contains the new address with ID
-                    const newAddress = page.props.address || ({ ...form, id: Date.now() } as UserAddress);
-                    emit('saved', newAddress);
+                onSuccess: () => {
+                    emit('saved', form);
                     emit('close');
                 },
                 onError: (errors) => {
@@ -361,16 +357,13 @@ const resetForm = () => {
         postal_code: '',
         country: 'Indonesia',
         delivery_instructions: '',
-        address_type: 'residential',
+        address_type: 'home',
         is_default: false,
     });
 };
 
-const clearErrors = () => {
-    // Clear errors dari page props
-    if (page.props.errors) {
-        page.props.errors = {};
-    }
+const setAddressType = (type: 'home' | 'office' | 'other') => {
+    form.address_type = type;
 };
 
 // Watch for address changes
@@ -386,80 +379,12 @@ watch(
     { immediate: true },
 );
 
-// Reset form and clear errors when modal closes
+// Reset form when modal closes
 watch(
     () => props.show,
     (show) => {
-        if (!show) {
-            if (!isEditing.value) {
-                resetForm();
-            }
-            // Clear errors when modal closes
-            clearErrors();
-        }
-    },
-);
-
-// Clear specific field error when user starts typing
-watch(
-    () => form.label,
-    () => {
-        if (errors.value.label) {
-            delete errors.value.label;
-        }
-    },
-);
-
-watch(
-    () => form.recipient_name,
-    () => {
-        if (errors.value.recipient_name) {
-            delete errors.value.recipient_name;
-        }
-    },
-);
-
-watch(
-    () => form.phone_number,
-    () => {
-        if (errors.value.phone_number) {
-            delete errors.value.phone_number;
-        }
-    },
-);
-
-watch(
-    () => form.address_line_1,
-    () => {
-        if (errors.value.address_line_1) {
-            delete errors.value.address_line_1;
-        }
-    },
-);
-
-watch(
-    () => form.city,
-    () => {
-        if (errors.value.city) {
-            delete errors.value.city;
-        }
-    },
-);
-
-watch(
-    () => form.state,
-    () => {
-        if (errors.value.state) {
-            delete errors.value.state;
-        }
-    },
-);
-
-watch(
-    () => form.postal_code,
-    () => {
-        if (errors.value.postal_code) {
-            delete errors.value.postal_code;
+        if (!show && !isEditing.value) {
+            resetForm();
         }
     },
 );
