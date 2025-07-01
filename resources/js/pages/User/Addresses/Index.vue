@@ -76,9 +76,10 @@
                                     <SelectValue placeholder="Semua Tipe" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="residential">Rumah</SelectItem>
+                                    <SelectItem value="all">Semua Tipe</SelectItem>
+                                    <SelectItem value="home">Rumah</SelectItem>
                                     <SelectItem value="office">Kantor</SelectItem>
-                                    <SelectItem value="apartment">Apartemen</SelectItem>
+                                    <SelectItem value="other">Lainnya</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Button variant="outline" @click="resetFilters">
@@ -105,12 +106,16 @@
                 <div v-else class="rounded-lg bg-white p-12 text-center shadow-sm">
                     <MapPin class="mx-auto mb-4 h-16 w-16 text-gray-300" />
                     <h3 class="mb-2 text-lg font-medium text-gray-900">
-                        {{ searchQuery || filterType ? 'Alamat tidak ditemukan' : 'Belum ada alamat tersimpan' }}
+                        {{ searchQuery || filterType !== 'all' ? 'Alamat tidak ditemukan' : 'Belum ada alamat tersimpan' }}
                     </h3>
                     <p class="mb-6 text-gray-500">
-                        {{ searchQuery || filterType ? 'Coba ubah filter pencarian Anda' : 'Tambahkan alamat pertama untuk memudahkan pengiriman' }}
+                        {{
+                            searchQuery || filterType !== 'all'
+                                ? 'Coba ubah filter pencarian Anda'
+                                : 'Tambahkan alamat pertama untuk memudahkan pengiriman'
+                        }}
                     </p>
-                    <Button v-if="!searchQuery && filterType !== 'all'" @click="openAddModal" class="bg-green-600 hover:bg-green-700">
+                    <Button v-if="!searchQuery && filterType === 'all'" @click="openAddModal" class="bg-green-600 hover:bg-green-700">
                         <Plus class="mr-2 h-4 w-4" />
                         Tambah Alamat Pertama
                     </Button>
@@ -160,7 +165,7 @@ interface UserAddress {
     postal_code: string;
     country: string;
     delivery_instructions?: string;
-    address_type: 'residential' | 'commercial' | 'apartment';
+    address_type: 'home' | 'office' | 'other';
     is_default: boolean;
     created_at: string;
     updated_at: string;
@@ -168,6 +173,7 @@ interface UserAddress {
 
 const props = defineProps<{
     addresses: UserAddress[];
+    error?: string;
 }>();
 
 // State
@@ -182,14 +188,14 @@ const successTitle = ref('');
 const successMessage = ref('');
 
 // Computed
-const homeAddresses = computed(() => props.addresses.filter((addr) => addr.address_type === 'residential').length);
+const homeAddresses = computed(() => props.addresses.filter((addr) => addr.address_type === 'home').length);
 
-const officeAddresses = computed(() => props.addresses.filter((addr) => addr.address_type === 'commercial').length);
+const officeAddresses = computed(() => props.addresses.filter((addr) => addr.address_type === 'office').length);
 
-const otherAddresses = computed(() => props.addresses.filter((addr) => addr.address_type === 'apartment').length);
+const otherAddresses = computed(() => props.addresses.filter((addr) => addr.address_type === 'other').length);
 
 const filteredAddresses = computed(() => {
-    let filtered = props.addresses;
+    let filtered = props.addresses || [];
 
     // Filter by search query
     if (searchQuery.value) {
