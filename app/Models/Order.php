@@ -23,6 +23,7 @@ class Order extends Model
         'subtotal',
         'tax_amount',
         'delivery_fee',
+        'discount_amount',
         'total_amount',
         'special_instructions',
         'status',
@@ -35,8 +36,10 @@ class Order extends Model
         'subtotal' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
     ];
+    protected $appends = ['can_pay'];
 
     // Relationships
     public function user()
@@ -82,7 +85,7 @@ class Order extends Model
 
     public function scopeDirect($query)
     {
-        return $query->where('order_type', 'direct');
+        return $query->where('order_type', 'one_time');
     }
 
     public function scopeSubscription($query)
@@ -98,7 +101,8 @@ class Order extends Model
 
     public function getCanBeCancelledAttribute()
     {
-        return in_array($this->status, ['pending', 'confirmed']);
+        return in_array($this->status, ['pending', 'confirmed']) &&
+            in_array($this->payment_status, ['unpaid', 'pending']);
     }
 
     public function getCustomerNameAttribute()
@@ -119,12 +123,17 @@ class Order extends Model
 
     public function getIsDirectOrderAttribute()
     {
-        return $this->order_type === 'direct';
+        return $this->order_type === 'one_time';
     }
 
     public function getIsSubscriptionOrderAttribute()
     {
         return $this->order_type === 'subscription';
+    }
+
+    public function getCanPayAttribute()
+    {
+        return $this->payment_status === 'unpaid';
     }
 
     // Boot method
@@ -141,6 +150,11 @@ class Order extends Model
             if (!$order->customer_name && $order->user) {
                 $order->customer_name = $order->user->name;
                 $order->customer_email = $order->user->email;
+            }
+
+            // Set default payment status
+            if (!$order->payment_status) {
+                $order->payment_status = 'unpaid';
             }
         });
     }
