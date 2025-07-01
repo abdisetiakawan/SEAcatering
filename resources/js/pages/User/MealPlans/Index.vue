@@ -255,11 +255,6 @@ const handleSubscribed = () => {
     successModal.message =
         'Terima kasih telah berlangganan. Anda akan menerima konfirmasi melalui email dan dapat melihat detail langganan di halaman "My Subscriptions".';
     showSuccessModal.value = true;
-
-    // Redirect to subscriptions after a delay
-    setTimeout(() => {
-        router.visit(route('user.subscriptions.index'));
-    }, 3000);
 };
 
 const formatCurrency = (amount: number) => {

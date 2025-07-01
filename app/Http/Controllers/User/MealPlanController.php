@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\MealPlan;
+use App\Models\UserAddress;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -28,6 +29,29 @@ class MealPlanController extends Controller
                 $minPrice = str_replace('+', '', $request->price_range);
                 $query->where('price_per_meal', '>=', $minPrice);
             }
+        }
+        $userAddresses = [];
+        if (auth()->check()) {
+            $userAddresses = UserAddress::where('user_id', auth()->id())
+                ->orderBy('is_default', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($address) {
+                    return [
+                        'id' => $address->id,
+                        'label' => $address->label,
+                        'recipient_name' => $address->recipient_name,
+                        'phone' => $address->phone_number,
+                        'full_address' => $address->full_address,
+                        'city' => $address->city,
+                        'state' => $address->state,
+                        'postal_code' => $address->postal_code,
+                        'country' => $address->country,
+                        'is_default' => $address->is_default,
+                        'address_type' => $address->address_type,
+                        'delivery_instructions' => $address->delivery_instructions
+                    ];
+                });
         }
 
         // Calories filter
@@ -73,6 +97,7 @@ class MealPlanController extends Controller
 
         return Inertia::render('User/MealPlans/Index', [
             'mealPlans' => $mealPlans,
+            'userAddresses' => $userAddresses,
             'planTypes' => $planTypes,
             'stats' => $stats,
             'filters' => $request->only(['plan_type', 'price_range', 'calories']),
