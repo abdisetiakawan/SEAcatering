@@ -187,10 +187,6 @@
                         <div class="border-b border-gray-200 p-6">
                             <div class="flex items-center justify-between">
                                 <h2 class="text-2xl font-bold text-gray-900">Customer Reviews</h2>
-                                <Button variant="outline" @click="showReviewModal = true">
-                                    <MessageSquare class="mr-2 h-4 w-4" />
-                                    Write Review
-                                </Button>
                             </div>
                         </div>
 
