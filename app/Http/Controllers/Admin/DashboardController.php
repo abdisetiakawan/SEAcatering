@@ -293,7 +293,7 @@ class DashboardController extends Controller
     {
         return Inventory::with('menuItem')
             ->whereRaw('current_stock <= minimum_stock * 1.2') // Alert when stock is 20% above minimum
-            ->orderByRaw('(current_stock::float / NULLIF(minimum_stock, 0)) ASC')
+            ->orderByRaw('(CAST(current_stock AS DECIMAL) / NULLIF(minimum_stock, 0)) ASC')
             ->take(6)
             ->get()
             ->map(function ($item) {
