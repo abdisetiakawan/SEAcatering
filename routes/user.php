@@ -26,7 +26,6 @@ Route::middleware(['auth', 'verified'])->prefix('user')->name('user.')->group(fu
     Route::prefix('meal-plans')->name('meal-plans.')->group(function () {
         Route::get('/', [MealPlanController::class, 'index'])->name('index');
         Route::get('/{mealPlan}', [MealPlanController::class, 'show'])->name('show');
-        Route::post('/{mealPlan}/subscribe', [MealPlanController::class, 'subscribe'])->name('subscribe');
     });
 
     Route::prefix('cart')->name('cart.')->group(function () {

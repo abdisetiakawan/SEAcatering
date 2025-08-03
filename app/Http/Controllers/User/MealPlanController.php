@@ -106,18 +106,45 @@ class MealPlanController extends Controller
 
     public function show(MealPlan $mealPlan)
     {
-        $mealPlan->load(['menuItems.category']);
+        $mealPlan->load(['menuItems']);
 
-        // Add additional data
-        $mealPlan->menu_items_count = $mealPlan->menuItems()->count();
-        $mealPlan->subscribers_count = $mealPlan->subscriptions()->where('status', 'active')->count();
-        $mealPlan->features = json_decode($mealPlan->features ?? '[]', true);
+        $userAddresses = [];
+        if (auth()->check()) {
+            $userAddresses = auth()->user()->addresses()
+                ->orderBy('is_default', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($address) {
+                    return [
+                        'id' => $address->id,
+                        'label' => $address->label,
+                        'recipient_name' => $address->recipient_name,
+                        'phone' => $address->phone_number,
+                        'full_address' => $address->full_address,
+                        'city' => $address->city,
+                        'state' => $address->state,
+                        'postal_code' => $address->postal_code,
+                        'country' => $address->country,
+                        'is_default' => $address->is_default,
+                        'address_type' => $address->address_type,
+                        'delivery_instructions' => $address->delivery_instructions
+                    ];
+                });
+        }
 
-        // Get user addresses for subscription
-        $userAddresses = auth()->user()->addresses ?? [];
+        $planData = $mealPlan->toArray();
+        $planData['menuItems'] = $mealPlan->menuItems;
+        $planData['menu_items_count'] = $mealPlan->menuItems->count();
+        $planData['subscribers_count'] = $mealPlan->subscriptions()->where('status', 'active')->count();
+
+        if (is_string($mealPlan->features)) {
+            $planData['features'] = json_decode($mealPlan->features, true) ?? [];
+        } else {
+            $planData['features'] = $mealPlan->features ?? [];
+        }
 
         return Inertia::render('User/MealPlans/Show', [
-            'mealPlan' => $mealPlan,
+            'mealPlan' => $planData,
             'userAddresses' => $userAddresses,
         ]);
     }
