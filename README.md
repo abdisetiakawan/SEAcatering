@@ -8,10 +8,6 @@
 
 * [GitHub Repository](https://github.com/abdisetiakawan/seacatering)
 
-### Deployment
-
-* [https://abdisetiawan.my.id](https://seacatering.abdisetiawan.my.id)
-
 ---
 
 ## 🚀 Cara Menjalankan Project
