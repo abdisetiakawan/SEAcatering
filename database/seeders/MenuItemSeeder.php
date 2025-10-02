@@ -73,7 +73,7 @@ class MenuItemSeeder extends Seeder
                 'ingredients' => 'Ikan kakap, sambal matah, nasi putih, lalapan',
                 'allergens' => ['fish'],
                 'image' => 'https://placehold.co/100',
-                'is_available' => true,
+                'is_available' => false,
                 'dietary_tags' => json_encode(['halal', 'seafood']),
                 'preparation_time' => 18,
                 'spice_level' => 2,

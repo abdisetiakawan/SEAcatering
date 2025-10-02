@@ -188,24 +188,56 @@
                             <div class="border-b border-gray-200 p-6">
                                 <h2 class="text-lg font-semibold text-gray-900">Pesanan Anda</h2>
                             </div>
-                            <div class="p-6">
-                                <div class="space-y-4">
-                                    <div v-for="item in cartItems" :key="item.id" class="flex items-center space-x-4">
+                            <div class="space-y-4 p-6">
+                                <div
+                                    v-if="hasUnavailableCartItems"
+                                    class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                                >
+                                    <p class="font-medium">Beberapa item di keranjang tidak tersedia untuk saat ini.</p>
+                                    <p class="mt-1 text-xs">
+                                        Hapus atau ganti {{ unavailableItemCount }} item sebelum melanjutkan checkout.
+                                    </p>
+                                </div>
+
+                                <div
+                                    v-for="item in cartItems"
+                                    :key="item.id"
+                                    class="flex items-center gap-4 rounded-lg border p-3"
+                                    :class="item.is_available ? 'border-gray-100' : 'border-red-200 bg-red-50/70'"
+                                >
+                                    <div class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
                                         <img
-                                            :src="item.menu_item.image.startsWith('http') ? item.menu_item.image : '/storage/' + item.menu_item.image"
+                                            v-if="item.menu_item.image"
+                                            :src="item.menu_item.image.startsWith('http') ? item.menu_item.image : `/storage/${item.menu_item.image}`"
                                             :alt="item.menu_item.name"
-                                            class="h-15 w-15 rounded-lg object-cover"
+                                            class="h-full w-full object-cover"
                                         />
-                                        <div class="min-w-0 flex-1">
-                                            <h3 class="text-sm font-medium text-gray-900">{{ item.menu_item.name }}</h3>
-                                            <p class="text-sm text-gray-500">{{ item.menu_item.category }}</p>
-                                            <div class="mt-1 flex items-center">
-                                                <span class="text-xs text-gray-400">{{ item.quantity }}x</span>
-                                                <span class="ml-2 text-sm font-medium text-gray-900">{{ formatCurrency(item.price) }}</span>
+                                        <div
+                                            v-else
+                                            class="flex h-full w-full items-center justify-center bg-gray-100 text-xs text-gray-500"
+                                        >
+                                            No Image
+                                        </div>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div>
+                                                <h3 class="text-sm font-medium text-gray-900">
+                                                    {{ item.menu_item.name }}
+                                                </h3>
+                                                <p class="text-sm text-gray-500">{{ item.menu_item.category }}</p>
+                                            </div>
+                                            <div class="text-sm font-semibold text-gray-900">
+                                                {{ formatCurrency(item.subtotal) }}
                                             </div>
                                         </div>
-                                        <div class="text-sm font-medium text-gray-900">
-                                            {{ formatCurrency(item.subtotal) }}
+                                        <div class="mt-1 flex items-center gap-2 text-sm text-gray-600">
+                                            <span class="text-xs text-gray-400">{{ item.quantity }}x</span>
+                                            <span>{{ formatCurrency(item.price) }}</span>
+                                        </div>
+                                        <div v-if="!item.is_available" class="mt-2 flex items-center text-xs text-red-600">
+                                            <AlertTriangle class="mr-1 h-4 w-4" />
+                                            <span>{{ item.unavailable_reason || 'Menu tidak tersedia.' }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -245,6 +277,9 @@
                                         <span>Total</span>
                                         <span class="text-green-600">{{ formatCurrency(finalTotal) }}</span>
                                     </div>
+                                    <p v-if="hasUnavailableCartItems" class="mt-2 text-xs text-red-600">
+                                        Item yang tidak tersedia tidak dihitung dalam total ini.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -276,22 +311,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import UserLayout from '@/layouts/UserLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { Banknote, Building2, CreditCard, Loader2, MapPin, Plus, Smartphone } from 'lucide-vue-next';
+import { AlertTriangle, Banknote, Building2, CreditCard, Loader2, MapPin, Plus, Smartphone } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface CartItem {
     id: number;
     menu_item: {
-        id: number;
+        id: number | null;
         name: string;
-        image: string;
+        image: string | null;
         category: string;
         calories: number;
         protein: number;
+        is_available?: boolean;
     };
     quantity: number;
     price: number;
     subtotal: number;
+    is_available: boolean;
+    unavailable_reason?: string | null;
 }
 
 interface Address {
@@ -327,6 +365,8 @@ const props = defineProps<{
     timeSlots: Record<string, string>;
     minDeliveryDate: string;
     maxDeliveryDate: string;
+    hasUnavailableItems: boolean;
+    unavailableItemCount: number;
 }>();
 
 const form = useForm({
@@ -344,12 +384,23 @@ const paymentFee = computed(() => {
     return props.paymentMethods[form.payment_method].fee;
 });
 
+const unavailableItems = computed(() => props.cartItems.filter((item) => !item.is_available));
+const unavailableItemCount = computed(() => unavailableItems.value.length || props.unavailableItemCount || 0);
+const hasUnavailableCartItems = computed(() => props.hasUnavailableItems || unavailableItems.value.length > 0);
+
 const finalTotal = computed(() => {
     return props.summary.total_amount + paymentFee.value;
 });
 
 const canPlaceOrder = computed(() => {
-    return form.delivery_address_id && form.delivery_date && form.delivery_time_slot && form.payment_method && props.cartItems.length > 0;
+    return (
+        form.delivery_address_id &&
+        form.delivery_date &&
+        form.delivery_time_slot &&
+        form.payment_method &&
+        props.cartItems.length > 0 &&
+        !hasUnavailableCartItems.value
+    );
 });
 
 const formatCurrency = (amount: number) => {
@@ -372,7 +423,7 @@ const getPaymentIcon = (iconName: string) => {
 };
 
 const submitOrder = () => {
-    if (!canPlaceOrder.value) return;
+    if (!canPlaceOrder.value || hasUnavailableCartItems.value) return;
 
     form.post(route('user.checkout.store'), {
         onSuccess: () => {
@@ -384,3 +435,5 @@ const submitOrder = () => {
     });
 };
 </script>
+
+
