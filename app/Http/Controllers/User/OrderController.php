@@ -456,8 +456,24 @@ class OrderController extends Controller
         $order->load([
             'orderItems.menuItem',
             'deliveryAddress',
-            'payment'
+            'payment',
+            'user',
         ]);
+
+        $deliveryAddress = null;
+        if ($order->deliveryAddress) {
+            $deliveryAddress = [
+                'recipient_name' => $order->deliveryAddress->recipient_name,
+                'phone_number' => $order->deliveryAddress->phone_number,
+                'address_line_1' => $order->deliveryAddress->address_line_1,
+                'address_line_2' => $order->deliveryAddress->address_line_2,
+                'city' => $order->deliveryAddress->city,
+                'province' => $order->deliveryAddress->province,
+                'postal_code' => $order->deliveryAddress->postal_code,
+                'full_address' => $order->deliveryAddress->full_address,
+                'delivery_instructions' => $order->deliveryAddress->delivery_instructions,
+            ];
+        }
 
         return Inertia::render('User/Orders/Invoice', [
             'order' => [
@@ -466,6 +482,7 @@ class OrderController extends Controller
                 'order_type' => $order->order_type,
                 'delivery_date' => $order->delivery_date?->format('Y-m-d'),
                 'delivery_time_slot' => $order->delivery_time_slot,
+                'delivery_time' => $order->delivery_time_slot,
                 'subtotal' => $order->subtotal,
                 'tax_amount' => $order->tax_amount,
                 'delivery_fee' => $order->delivery_fee,
@@ -473,29 +490,30 @@ class OrderController extends Controller
                 'special_instructions' => $order->special_instructions,
                 'status' => $order->status,
                 'payment_status' => $order->payment_status,
+                'payment_method' => $order->payment?->payment_method ?? $order->payment_method,
                 'created_at' => $order->created_at->format('Y-m-d H:i:s'),
-                'delivery_address' => $order->deliveryAddress ? [
-                    'recipient_name' => $order->deliveryAddress->recipient_name,
-                    'phone_number' => $order->deliveryAddress->phone_number,
-                    'full_address' => $order->deliveryAddress->full_address,
-                ] : null,
+                'customer_name' => optional($order->user)->name,
+                'customer_email' => optional($order->user)->email,
+                'delivery_address' => $deliveryAddress,
                 'order_items' => $order->orderItems->map(function ($item) {
                     return [
                         'id' => $item->id,
                         'quantity' => $item->quantity,
-                        'unit_price' => $item->unit_price,
-                        'total_price' => $item->total_price,
+                        'unit_price' => (float) $item->unit_price,
+                        'total_price' => (float) $item->total_price,
+                        'price' => (float) $item->unit_price,
+                        'total' => (float) $item->total_price,
                         'menu_item' => [
                             'name' => $item->menuItem->name,
                             'description' => $item->menuItem->description,
-                        ]
+                        ],
                     ];
-                }),
+                })->values(),
                 'payment' => $order->payment ? [
-                    'amount' => $order->payment->amount,
+                    'amount' => (float) $order->payment->amount,
                     'status' => $order->payment->status,
                     'payment_method' => $order->payment->payment_method,
-                    'payment_date' => $order->payment->payment_date?->format('Y-m-d H:i:s'),
+                    'payment_date' => optional($order->payment->payment_date)->format('Y-m-d H:i:s'),
                 ] : null,
             ]
         ]);

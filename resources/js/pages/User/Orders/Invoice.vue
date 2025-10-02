@@ -46,8 +46,8 @@
                     <div>
                         <h3 class="mb-4 text-lg font-semibold text-gray-900">Bill To:</h3>
                         <div class="text-gray-700">
-                            <p class="font-medium">{{ order.customer_name }}</p>
-                            <p>{{ order.customer_email }}</p>
+                            <p class="font-medium">{{ order.customer_name || (order.delivery_address ? order.delivery_address.recipient_name : '-') }}</p>
+                            <p>{{ order.customer_email || '-' }}</p>
                         </div>
                     </div>
 
@@ -55,18 +55,29 @@
                     <div v-if="order.delivery_address">
                         <h3 class="mb-4 text-lg font-semibold text-gray-900">Deliver To:</h3>
                         <div class="text-gray-700">
-                            <p>{{ order.delivery_address.address_line_1 }}</p>
-                            <p v-if="order.delivery_address.address_line_2">{{ order.delivery_address.address_line_2 }}</p>
-                            <p>{{ order.delivery_address.city }}, {{ order.delivery_address.province }}</p>
-                            <p>{{ order.delivery_address.postal_code }}</p>
+                            <p class="font-medium">{{ order.delivery_address.recipient_name }}</p>
+                            <p v-if="order.delivery_address.phone_number">{{ order.delivery_address.phone_number }}</p>
+                            <template v-if="order.delivery_address.address_line_1">
+                                <p>{{ order.delivery_address.address_line_1 }}</p>
+                                <p v-if="order.delivery_address.address_line_2">{{ order.delivery_address.address_line_2 }}</p>
+                                <p>{{ order.delivery_address.city }}, {{ order.delivery_address.province }}</p>
+                                <p>{{ order.delivery_address.postal_code }}</p>
+                            </template>
+                            <p v-else-if="order.delivery_address.full_address">{{ order.delivery_address.full_address }}</p>
+                            <p v-if="order.delivery_address.delivery_instructions" class="mt-2 text-sm text-gray-500">
+                                {{ order.delivery_address.delivery_instructions }}
+                            </p>
                         </div>
                         <div class="mt-4 text-sm text-gray-600">
                             <p><strong>Delivery Date:</strong> {{ formatDate(order.delivery_date) }}</p>
-                            <p><strong>Delivery Time:</strong> {{ order.delivery_time }}</p>
+                            <p><strong>Delivery Time:</strong> {{ order.delivery_time || order.delivery_time_slot || '-' }}</p>
                         </div>
                     </div>
+                    <div v-else>
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900">Deliver To:</h3>
+                        <p class="text-gray-600">Delivery information is not available.</p>
+                    </div>
                 </div>
-
                 <!-- Order Items -->
                 <div class="mb-8">
                     <h3 class="mb-4 text-lg font-semibold text-gray-900">Order Items</h3>
@@ -91,8 +102,8 @@
                                     <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                                         {{ item.quantity }}
                                     </td>
-                                    <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">Rp {{ formatPrice(item.price) }}</td>
-                                    <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">Rp {{ formatPrice(item.total) }}</td>
+                                    <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">Rp {{ formatPrice(item.unit_price ?? item.price ?? 0) }}</td>
+                                    <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">Rp {{ formatPrice(item.total_price ?? item.total ?? 0) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -132,7 +143,7 @@
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div>
                                 <p class="text-sm font-medium text-gray-600">Payment Method</p>
-                                <p class="text-gray-900 capitalize">{{ order.payment_method }}</p>
+                                <p class="text-gray-900">{{ formatPaymentMethod(order.payment_method || (order.payment ? order.payment.payment_method : null)) }}</p>
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-gray-600">Payment Status</p>
@@ -174,8 +185,10 @@ import { ArrowLeft, Printer } from 'lucide-vue-next';
 interface OrderItem {
     id: number;
     quantity: number;
-    price: number;
-    total: number;
+    unit_price: number;
+    total_price: number;
+    price?: number;
+    total?: number;
     menu_item: {
         name: string;
         description: string;
@@ -183,48 +196,56 @@ interface OrderItem {
 }
 
 interface DeliveryAddress {
+    recipient_name: string;
+    phone_number: string;
     address_line_1: string;
-    address_line_2?: string;
+    address_line_2?: string | null;
     city: string;
     province: string;
     postal_code: string;
+    full_address?: string | null;
+    delivery_instructions?: string | null;
 }
 
 interface Payment {
     amount: number;
     status: string;
-    payment_method: string;
-    payment_date?: string;
+    payment_method?: string | null;
+    payment_date?: string | null;
 }
 
 interface Order {
     id: number;
     order_number: string;
     order_type: string;
-    delivery_date: string;
-    delivery_time: string;
+    delivery_date?: string | null;
+    delivery_time?: string | null;
+    delivery_time_slot?: string | null;
     subtotal: number;
     tax_amount: number;
     delivery_fee: number;
     total_amount: number;
-    special_instructions?: string;
+    special_instructions?: string | null;
     status: string;
     payment_status: string;
-    payment_method: string;
+    payment_method?: string | null;
     created_at: string;
-    customer_name: string;
-    customer_email: string;
+    customer_name?: string | null;
+    customer_email?: string | null;
     delivery_address: DeliveryAddress | null;
     order_items: OrderItem[];
     payment: Payment | null;
 }
 
-const props = defineProps<{
+defineProps<{
     order: Order;
 }>();
 
 // Methods
-const formatDate = (date: string) => {
+const formatDate = (date?: string | null) => {
+    if (!date) {
+        return '-';
+    }
     return new Date(date).toLocaleDateString('id-ID', {
         year: 'numeric',
         month: 'long',
@@ -232,8 +253,27 @@ const formatDate = (date: string) => {
     });
 };
 
-const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID').format(price);
+const formatPrice = (price?: number | null) => {
+    return new Intl.NumberFormat('id-ID').format(Number(price ?? 0));
+};
+
+const formatPaymentMethod = (method?: string | null) => {
+    if (!method) {
+        return '-';
+    }
+    const map: Record<string, string> = {
+        bank_transfer: 'Bank Transfer',
+        credit_card: 'Credit Card',
+        e_wallet: 'E-Wallet',
+        cash: 'Cash on Delivery',
+    };
+    const normalized = method.toLowerCase();
+    if (map[normalized]) {
+        return map[normalized];
+    }
+    return normalized
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 const getOrderTypeLabel = (type: string) => {
@@ -262,3 +302,4 @@ const printInvoice = () => {
     }
 }
 </style>
+
