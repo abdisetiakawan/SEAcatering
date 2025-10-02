@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Cart;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -50,7 +51,47 @@ class HandleInertiaRequests extends Middleware
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
+            'cart' => fn () => $this->shareCartData($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    protected function shareCartData(Request $request): array
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return [
+                'items' => [],
+                'count' => 0,
+                'total' => 0,
+            ];
+        }
+
+        $cartItems = Cart::forUser($user->id)
+            ->with(['menuItem:id,name,price,image'])
+            ->get()
+            ->map(function (Cart $cartItem) {
+                if (! $cartItem->menuItem) {
+                    return null;
+                }
+
+                return [
+                    'id' => $cartItem->id,
+                    'menu_item_id' => $cartItem->menu_item_id,
+                    'name' => $cartItem->menuItem->name,
+                    'quantity' => $cartItem->quantity,
+                    'price' => (float) $cartItem->unit_price,
+                    'image' => $cartItem->menuItem->image,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        return [
+            'items' => $cartItems->toArray(),
+            'count' => $cartItems->sum('quantity'),
+            'total' => $cartItems->sum(fn (array $item) => $item['price'] * $item['quantity']),
         ];
     }
 }

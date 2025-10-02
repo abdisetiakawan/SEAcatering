@@ -202,6 +202,13 @@ interface CartItem {
     name: string;
     quantity: number;
     price: number;
+    image?: string | null;
+}
+
+interface SharedCart {
+    items: CartItem[];
+    count: number;
+    total: number;
 }
 
 interface Props {
@@ -224,12 +231,41 @@ const cartMenuRef = ref<HTMLElement>();
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
 
+const sharedCart = computed<SharedCart>(() => {
+    const cart = page.props.cart as Partial<SharedCart> | undefined;
+    const items = Array.isArray(cart?.items) ? (cart.items as CartItem[]) : [];
+    const rawCount = cart?.count;
+    const rawTotal = cart?.total;
+
+    return {
+        items,
+        count: typeof rawCount === 'number' ? rawCount : items.reduce((total, item) => total + item.quantity, 0),
+        total: typeof rawTotal === 'number' ? rawTotal : items.reduce((total, item) => total + item.price * item.quantity, 0),
+    };
+});
+
+const cartItems = computed<CartItem[]>(() => {
+    if (props.cartItems && props.cartItems.length > 0) {
+        return props.cartItems;
+    }
+
+    return sharedCart.value.items;
+});
+
 const cartItemsCount = computed(() => {
-    return props.cartItems.reduce((total, item) => total + item.quantity, 0);
+    if (props.cartItems && props.cartItems.length > 0) {
+        return props.cartItems.reduce((total, item) => total + item.quantity, 0);
+    }
+
+    return sharedCart.value.count;
 });
 
 const cartTotal = computed(() => {
-    return props.cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+    if (props.cartItems && props.cartItems.length > 0) {
+        return props.cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+    }
+
+    return sharedCart.value.total;
 });
 
 const userNavItems = [
@@ -280,3 +316,5 @@ onUnmounted(() => {
     document.removeEventListener('click', closeMenus);
 });
 </script>
+
+
