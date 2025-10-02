@@ -57,14 +57,25 @@
                             <div class="flex items-center space-x-1">
                                 <div class="flex items-center">
                                     <Star
-                                        v-for="i in 5"
-                                        :key="i"
-                                        :i="i <= Math.floor(Number(menuItem.average_rating) || 0) ? 'fill-current text-yellow-400' : 'text-gray-300'"
-                                        :class="['h-5 w-5']"
+                                        v-for="n in fullStars"
+                                        :key="`full-${n}`"
+                                        class="h-5 w-5 text-yellow-400"
+                                        fill="currentColor"
+                                    />
+                                    <StarHalf
+                                        v-if="hasHalfStar"
+                                        class="h-5 w-5 text-yellow-400"
+                                        fill="currentColor"
+                                    />
+                                    <Star
+                                        v-for="n in emptyStars"
+                                        :key="`empty-${n}`"
+                                        class="h-5 w-5 text-gray-300"
+                                        fill="none"
                                     />
                                 </div>
                                 <span class="text-sm font-medium text-gray-900">
-                                    {{ (Number(menuItem.average_rating) || 0).toFixed(1) }}
+                                    {{ ratingValue.toFixed(1) }}
                                 </span>
                             </div>
                             <span class="text-sm text-gray-600"> ({{ menuItem.review_count || 0 }} reviews) </span>
@@ -296,11 +307,12 @@ import {
     Plus,
     ShoppingCart,
     Star,
+    StarHalf,
     User,
     Wheat,
     Zap,
 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { route } from 'ziggy-js';
 
 interface MenuItem {
@@ -347,6 +359,13 @@ const isLoading = ref(false);
 const isWishlisted = ref(false);
 const showSuccessModal = ref(false);
 const showReviewModal = ref(false);
+const ratingValue = computed(() => {
+    const value = Number(props.menuItem.average_rating) || 0;
+    return Math.min(Math.max(value, 0), 5);
+});
+const fullStars = computed(() => Math.floor(ratingValue.value));
+const hasHalfStar = computed(() => ratingValue.value - fullStars.value >= 0.5 && fullStars.value < 5);
+const emptyStars = computed(() => 5 - fullStars.value - (hasHalfStar.value ? 1 : 0));
 
 // Methods
 const formatCurrency = (amount: number) => {
@@ -404,3 +423,5 @@ const handleReviewSubmitted = () => {
     router.reload({ only: ['menuItem'] });
 };
 </script>
+
+
