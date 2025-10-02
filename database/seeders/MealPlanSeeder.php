@@ -18,12 +18,12 @@ class MealPlanSeeder extends Seeder
                 'plan_type' => 'diet',
                 'is_active' => true,
                 'image' => '/images/plans/hemat-harian.jpg',
-                'features' => json_encode([
+                'features' => [
                     'Menu berganti setiap hari',
                     'Porsi standar mengenyangkan',
                     'Gratis ongkir area Jakarta',
                     'Bisa cancel kapan saja'
-                ]),
+                ],
             ],
             [
                 'name' => 'Paket Premium Mingguan',
@@ -33,14 +33,14 @@ class MealPlanSeeder extends Seeder
                 'plan_type' => 'protein',
                 'is_active' => true,
                 'image' => '/images/plans/premium-mingguan.jpg',
-                'features' => json_encode([
+                'features' => [
                     'Menu premium chef recommendation',
                     'Bahan berkualitas premium',
                     'Porsi besar dan bergizi',
                     'Gratis ongkir seluruh Jabodetabek',
                     'Customer service 24/7',
                     'Garansi kepuasan 100%'
-                ]),
+                ],
             ],
             [
                 'name' => 'Paket Sehat Bulanan',
@@ -50,14 +50,14 @@ class MealPlanSeeder extends Seeder
                 'plan_type' => 'royal',
                 'is_active' => true,
                 'image' => '/images/plans/sehat-bulanan.jpg',
-                'features' => json_encode([
+                'features' => [
                     'Menu rendah kalori tinggi protein',
                     'Konsultasi nutrisi gratis',
                     'Tracking kalori harian',
                     'Menu disesuaikan kebutuhan',
                     'Gratis ongkir dan vitamin',
                     'Diskon 15% untuk bulan kedua'
-                ]),
+                ],
             ],
             [
                 'name' => 'Paket Vegetarian',
@@ -67,14 +67,14 @@ class MealPlanSeeder extends Seeder
                 'plan_type' => 'protein',
                 'is_active' => true,
                 'image' => '/images/plans/vegetarian.jpg',
-                'features' => json_encode([
+                'features' => [
                     '100% menu vegetarian',
                     'Tinggi protein nabati',
                     'Bahan organik pilihan',
                     'Menu bervariasi setiap hari',
                     'Gratis konsultasi gizi',
                     'Kemasan ramah lingkungan'
-                ]),
+                ],
             ],
             [
                 'name' => 'Paket Family',
@@ -84,14 +84,14 @@ class MealPlanSeeder extends Seeder
                 'plan_type' => 'royal',
                 'is_active' => true,
                 'image' => '/images/plans/family.jpg',
-                'features' => json_encode([
+                'features' => [
                     'Paket untuk 4 orang',
                     'Menu anak dan dewasa',
                     'Harga paling hemat',
                     'Porsi besar keluarga',
                     'Gratis ongkir dan snack',
                     'Fleksibel jadwal pengiriman'
-                ]),
+                ],
             ],
         ];
 

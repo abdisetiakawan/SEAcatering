@@ -18,7 +18,7 @@ class SubscriptionSeeder extends Seeder
                 'start_date' => now()->addDays(1),
                 'end_date' => now()->addDays(31),
                 'status' => 'active',
-                'delivery_days' => json_encode(['monday', 'wednesday', 'friday']),
+                'delivery_days' => ['monday', 'wednesday', 'friday'],
                 'meals_per_day' => 1,
                 'next_delivery_date' => now()->addDays(1),
                 'total_price' => rand(100, 1000)
@@ -31,7 +31,7 @@ class SubscriptionSeeder extends Seeder
                 'start_date' => now()->subDays(5),
                 'end_date' => now()->addDays(25),
                 'status' => 'active',
-                'delivery_days' => json_encode(['monday', 'tuesday', 'wednesday', 'thursday', 'friday']),
+                'delivery_days' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
                 'meals_per_day' => 1,
                 'next_delivery_date' => now()->addDays(1),
                 'total_price' => rand(100, 1000)
@@ -44,7 +44,7 @@ class SubscriptionSeeder extends Seeder
                 'start_date' => now()->subDays(10),
                 'end_date' => now()->addDays(20),
                 'status' => 'active',
-                'delivery_days' => json_encode(['monday', 'wednesday', 'friday', 'sunday']),
+                'delivery_days' => ['monday', 'wednesday', 'friday', 'sunday'],
                 'meals_per_day' => 2,
                 'next_delivery_date' => now()->addDays(2),
                 'total_price' => rand(100, 1000)
@@ -57,7 +57,7 @@ class SubscriptionSeeder extends Seeder
                 'start_date' => now()->subDays(3),
                 'end_date' => now()->addDays(4),
                 'status' => 'paused',
-                'delivery_days' => json_encode(['tuesday', 'thursday', 'saturday']),
+                'delivery_days' => ['tuesday', 'thursday', 'saturday'],
                 'meals_per_day' => 1,
                 'next_delivery_date' => null,
                 'total_price' => rand(100, 1000)
@@ -70,7 +70,7 @@ class SubscriptionSeeder extends Seeder
                 'start_date' => now()->subDays(15),
                 'end_date' => now()->subDays(1),
                 'status' => 'expired',
-                'delivery_days' => json_encode(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']),
+                'delivery_days' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
                 'meals_per_day' => 4,
                 'next_delivery_date' => null,
                 'total_price' => rand(100, 1000)
@@ -78,7 +78,7 @@ class SubscriptionSeeder extends Seeder
         ];
 
         foreach ($subscriptions as $subscription) {
-            \App\Models\Subscription::create($subscription);
+            Subscription::create($subscription);
         }
     }
 }
