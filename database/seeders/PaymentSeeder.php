@@ -9,6 +9,9 @@ class PaymentSeeder extends Seeder
 {
     public function run(): void
     {
+        // Clear existing payments to avoid unique constraint collisions on reseed
+        Payment::truncate();
+
         $payments = [
             [
                 'order_id' => 1,
